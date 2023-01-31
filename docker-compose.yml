@@ -1,0 +1,52 @@
+version: "3.9"
+
+services:
+  # Django setting
+  app:
+    build:
+      context: .
+      args:
+        - DEV=true
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app
+    command: >
+      sh -c "python manage.py wait_for_db && configs:
+             python manage.py makemigrations &&
+             python manage.py makemigrations api &&
+             python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+    environment:
+      #db환경설정 밑에서 설정한 db에 맞게 설정해야암
+      - DB_HOST=db
+      - DB_NAME=devdb
+      - DB_USER=devuser
+      - DB_PASS=changeme
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    depends_on:
+      # db서버가 열릴 때까지 기다렸다가 우리의 앱이 실행됨
+      - db
+
+  # Postgres
+  db:
+    image: postgres:13-alpine
+    volumes:
+      - dev-db-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=devuser
+      - POSTGRES_PASSWORD=changeme
+      - POSTGRES_DB=devdb
+
+  cron:
+    build: ./docker-python-cronjob
+    environment:
+      - CRON_ENTRY=* * * * * python /app/script.py
+    depends_on:
+      - app
+
+volumes:
+  # 볼륨의 이름. 자동으로 관리됨 기본 위치에 저장됨
+  dev-db-data:
