@@ -8,20 +8,21 @@ class ChessELO(models.Model):
 
 
 class ChessNotationCheckPoint(models.Model):
-    fname = models.CharField(max_length=100, unique=True)
+    fname = models.TextField(unique=True)
     checkpoint = models.IntegerField()
+    status = models.BooleanField(default=False)
 
 
 class ChessNotation(models.Model):
     avg = models.ForeignKey(
         ChessELO, on_delete=models.CASCADE, related_name='notation')
-    white = models.CharField(max_length=100)
-    black = models.CharField(max_length=100)
-    site = models.URLField(max_length=200)
+    white = models.TextField()
+    black = models.TextField()
+    site = models.TextField()
     mainline = models.TextField()
     opening = models.TextField()
-    event = models.CharField(max_length=50)
-    result = models.CharField(max_length=20)
+    event = models.TextField()
+    result = models.TextField()
 
 
 class ChessPuzzles(models.Model):
@@ -37,13 +38,14 @@ class ChessMainline(models.Model):
 
 
 class ChessProcess(models.Model):
-    fen = models.TextField()
+    fen = models.TextField(unique=True)
 
 
 class ChessFenNextMoves(models.Model):
     fen = models.ForeignKey(
-        ChessProcess, on_delete=models.PROTECT, related_name='next_move')
-    white = models.IntegerField()
-    draw = models.IntegerField()
-    black = models.IntegerField()
+        ChessProcess, on_delete=models.PROTECT, related_name='next_moves')
+    white = models.IntegerField(default=0)
+    draw = models.IntegerField(default=0)
+    black = models.IntegerField(default=0)
     next_move = models.CharField(max_length=10)
+    cnt = models.IntegerField(default=0)

@@ -15,7 +15,7 @@ class TestParsing(unittest.TestCase):
     def test_api_login_user_upload_success(self):
         self.c.login(username='test', password='test123')
         op = open('api\\test\\test.txt', 'r')
-        res = self.c.post('http://127.0.0.1:8000/api/uploadfile',
+        res = self.c.post('http://127.0.0.1:8000/chessapi/api/uploadfile',
                           data={'uploaded_file': op})
 
         self.assertEqual(res.status_code, 200)
@@ -32,7 +32,7 @@ class TestParsing(unittest.TestCase):
     def test_unauth_user_upload_fail(self):
 
         op = open('api\\test\\test.txt', 'r')
-        res = self.c.post('http://127.0.0.1:8000/api/uploadfile',
+        res = self.c.post('http://127.0.0.1:8000/chessapi/api/uploadfile',
                           data={'uploaded_file': op})
 
         self.assertEqual(res.status_code, 401)
@@ -43,10 +43,10 @@ class TestParsing(unittest.TestCase):
         op = open('api\\dist\\notation\\v1.pgn', 'rb')
 
         filename = json.loads(self.c.post(
-            'http://127.0.0.1:8000/api/uploadfile', data={'uploaded_file': op}).content)
+            'http://127.0.0.1:8000/chessapi/api/uploadfile', data={'uploaded_file': op}).content)
 
         res = self.c.get(
-            f'http://127.0.0.1:8000/api/parse?filename={filename}&num=5')
+            f'http://127.0.0.1:8000/chessapi/api/parse?filename={filename}&num=5')
 
         self.assertEqual(res.status_code, 200)
 
@@ -57,13 +57,13 @@ class TestParsing(unittest.TestCase):
         self.c.logout()
 
     def test_get_data(self):
-        res = self.c.get(f'http://127.0.0.1:8000/api/getdata')
+        res = self.c.get(f'http://127.0.0.1:8000/chessapi/api/getdata')
 
         self.assertEqual(res.status_code, 401)
 
         self.client_login()
 
-        res = self.c.get(f'http://127.0.0.1:8000/api/getdata')
+        res = self.c.get(f'http://127.0.0.1:8000/chessapi/api/getdata')
 
         self.assertEqual(res.status_code, 200)
 

@@ -13,6 +13,7 @@ services:
       - ./app:/app
     command: >
       sh -c "python manage.py wait_for_db && configs:
+             python manage.py flush_data &&
              python manage.py makemigrations &&
              python manage.py makemigrations api &&
              python manage.py migrate &&
@@ -41,7 +42,7 @@ services:
       - POSTGRES_DB=devdb
 
   cron:
-    build: ./docker-python-cronjob
+    build: ./docker-cronjob
     environment:
       - CRON_ENTRY=* * * * * python /app/script.py
     depends_on:

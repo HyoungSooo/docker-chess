@@ -4,6 +4,6 @@ WORKDIR /app
 
 COPY ./requirements.txt /app
 
-COPY script.py /app
+COPY ./app/script.py /app
 
 RUN python -m pip install requests
