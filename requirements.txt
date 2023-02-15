@@ -7,3 +7,4 @@ stockfish
 chess
 pandas
 python-crontab
+revChatGPT

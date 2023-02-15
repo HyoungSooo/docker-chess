@@ -11,7 +11,7 @@ from django.db.models import QuerySet
 
 class Processor:
 
-    def __init__(self, fpath, num, checkpoint) -> None:
+    def __init__(self, fpath, num, checkpoint, is_start=False) -> None:
         self.df = pd.DataFrame()
         self.num = num
         self.msg = 'done'
@@ -19,6 +19,7 @@ class Processor:
         self.checkpoint = checkpoint
         self.status = False
         self.next_checkpoint = checkpoint + num
+        self.is_start = False
 
         b, m = self.parse_data_to_csv()
         if b:
@@ -28,6 +29,9 @@ class Processor:
 
     def parse_data_to_csv(self):
         pgn = open(self.fpath, 'r')
+        if self.is_start:
+            for _ in range(1):
+                game = chess.pgn.read_game(pgn)
 
         for i in range(self.checkpoint):
             game = chess.pgn.read_game(pgn)
@@ -53,6 +57,7 @@ class Processor:
 
             if game == None:
                 self.status = True
+                self.df.drop(self.df.index[-1])
 
             return True, 'done'
         else:

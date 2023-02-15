@@ -3,11 +3,12 @@ from api.models import ChessELO
 
 def is_unique_avg(value):
     try:
+        return ChessELO.objects.get(avg=value)
+
+    except:
         data = ChessELO.objects.create(avg=value)
         data.save()
         return data
-    except:
-        return ChessELO.objects.get(avg=value)
 
 
 def write_pgn_chunk_files(value, version, name):

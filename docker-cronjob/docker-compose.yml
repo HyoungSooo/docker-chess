@@ -5,4 +5,4 @@ services:
     build:
       context: .
     environment:
-      - CRON_ENTRY=* * * * * python /app/script.py
+      - CRON_ENTRY=* * * * * python /app/script_for_parse.py

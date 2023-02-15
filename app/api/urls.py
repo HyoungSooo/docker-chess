@@ -4,13 +4,15 @@ from ninja import NinjaAPI, File, Schema
 from ninja.files import UploadedFile
 from ninja.security import django_auth
 from django.http import JsonResponse, HttpResponse
-from .models import ChessELO, ChessNotation, ChessNotationCheckPoint, ChessMainline, ChessFenNextMoves
-import pandas as pd
+from .models import (ChessELO, ChessNotation, ChessNotationCheckPoint,
+                     ChessMainline, ChessFenNextMoves, ChessProcess)
 from api.spark.processor import Processor, MainlineProcessor
 from django.core import serializers
-from api.utils import write_pgn_chunk_files
+from api.utils import write_pgn_chunk_files, get_stockfish
 import chess.pgn
 import os
+import chess
+from django.conf import settings
 
 api = NinjaAPI()
 
@@ -31,11 +33,10 @@ def uploadfile(request, uploaded_file: UploadedFile = File(...)):
 def parse_notation(request, filename: str, num: int):
     v = 0
     while True:
-        if not os.path.isfile(f'{v}_{filename}'):
-            for i in range(v+1):
-                os.remove(f'{v}_{filename}')
-                return 'this file already done'
-            break
+        if not os.path.isfile(f'{settings.BASE_DIR}/data/{v}_{filename}'):
+            for i in range(v):
+                os.remove(f'{settings.BASE_DIR}/data/{i}_{filename}')
+            return 'this file already done'
         try:
             checkpoint = ChessNotationCheckPoint.objects.get(
                 fname=f'{v}_{filename}')
@@ -49,8 +50,13 @@ def parse_notation(request, filename: str, num: int):
                 fname=f'{v}_{filename}', checkpoint=0, status=False)
             break
 
+    if checkpoint.checkpoint != 0:
+        start = True
+    else:
+        start = False
+
     res = Processor(
-        f'{v}_{filename}', num, checkpoint.checkpoint)
+        f'/app/data/{v}_{filename}', num, checkpoint.checkpoint, start)
 
     if res.status == True:
         checkpoint.status = True
@@ -98,6 +104,45 @@ def get_move_data(request):
     data_json = serializers.serialize('json', data)
 
     return HttpResponse(data_json, content_type="text/json-comment-filtered")
+
+
+@api.get('/get_moveline')
+def get_moveline(request, uci: str):
+
+    uci = uci.split(',')
+    board = chess.Board()
+    for i in uci:
+        board.push_uci(i)
+
+    try:
+        fen_data = ChessProcess.objects.get(fen=board.fen())
+
+    except:
+        return JsonResponse({"msg": "no data"})
+
+    data = fen_data.next_moves.all().order_by('-cnt')
+    data_json = serializers.serialize('json', data)
+
+    return JsonResponse(data_json, safe=False)
+
+
+@api.get('/eval_position')
+def eval_pos(request, fen: str):
+    stockfish = get_stockfish()
+
+    if stockfish.is_fen_valid(fen):
+        stockfish.set_fen_position(fen)
+        return stockfish.get_evaluation()
+
+
+@api.get('/stockfish')
+def stockfish_recommend(request, fen: str):
+    stockfish = get_stockfish()
+    if stockfish.is_fen_valid(fen):
+        stockfish.set_fen_position(fen)
+        return stockfish.get_top_moves(3)
+
+    return JsonResponse({'msg': 'fen is unvalid'})
 
 
 urlpatterns = [

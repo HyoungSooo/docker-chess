@@ -1,7 +1,6 @@
-FROM python:3.9-buster
+FROM python:3.10.9-buster
 
 ENV PYTHONUNBUFFERPED 1
-
 COPY ./requirements.txt /tmp/requirements.txt
 COPY ./requirements.dev.txt /tmp/requirements.dev.txt
 COPY ./app /app
@@ -18,12 +17,6 @@ RUN python -m venv /py && \
     if [ "$DEV" = true ]; \
         then /py/bin/pip install -r /tmp/requirements.dev.txt; \
     fi && \
-    rm -rf /tmp && \
-    adduser \
-        --no-create-home \
-        --disabled-password \
-        django-user
+    rm -rf /tmp
 
 ENV PATH="/py/bin:$PATH"
-
-USER django-user
