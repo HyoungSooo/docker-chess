@@ -75,6 +75,7 @@
   var $tableBody = $("#chess-moves-body");
   var $stockfishBody = $("#stockfish-moves-body");
 
+
   
   function removeGreySquares() {
     $("#myBoard .square-55d63").css("background", "");
@@ -180,10 +181,7 @@
   })
 
   function getData(){
-    if (!$uci.html()) {
-      $tableBody.empty()
-      return
-    }
+
     $.ajax({
       type: "GET",  
       url: "/chessapi/api/get_moveline?uci=" + $uci.html(),

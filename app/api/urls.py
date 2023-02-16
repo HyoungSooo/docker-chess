@@ -8,11 +8,12 @@ from .models import (ChessELO, ChessNotation, ChessNotationCheckPoint,
                      ChessMainline, ChessFenNextMoves, ChessProcess)
 from api.spark.processor import Processor, MainlineProcessor
 from django.core import serializers
-from api.utils import write_pgn_chunk_files, get_stockfish
+from api.utils import write_pgn_chunk_files, get_stockfish, list_chunk
 import chess.pgn
 import os
 import chess
 from django.conf import settings
+from multiprocessing import Pool
 
 api = NinjaAPI()
 
@@ -76,24 +77,24 @@ def get_data(request):
 
 @api.get('/mainline')
 def parse_mainline(request, num: int):
+    pool = Pool(4)
     first_pk = ChessNotation.objects.first()
     try:
         checkpoint = ChessMainline.objects.all()[0]
         if checkpoint.checkpoint < first_pk.pk:
             checkpoint.checkpoint = first_pk.pk
-        print(checkpoint)
     except:
         checkpoint = ChessMainline.objects.create(checkpoint=first_pk.pk)
-        print(checkpoint)
     data = ChessNotation.objects.filter(
         pk__gte=checkpoint.checkpoint, pk__lt=checkpoint.checkpoint + num)
-    print(len(data))
-    if data:
-        MainlineProcessor(data)
 
     checkpoint.checkpoint += num
 
     checkpoint.save()
+    if data:
+        # MainlineProcessor(data)
+
+        pool.map(MainlineProcessor, data)
 
     return
 
@@ -109,21 +110,32 @@ def get_move_data(request):
 @api.get('/get_moveline')
 def get_moveline(request, uci: str):
 
-    uci = uci.split(',')
-    board = chess.Board()
-    for i in uci:
-        board.push_uci(i)
+    if uci != '':
+        uci = uci.split(',')
+        board = chess.Board()
+        for i in uci:
+            board.push_uci(i)
 
-    try:
-        fen_data = ChessProcess.objects.get(fen=board.fen())
+        try:
+            fen_data = ChessProcess.objects.get(fen=board.fen())
 
-    except:
-        return JsonResponse({"msg": "no data"})
+        except:
+            return JsonResponse({"msg": "no data"})
 
-    data = fen_data.next_moves.all().order_by('-cnt')
-    data_json = serializers.serialize('json', data)
+        data = fen_data.next_moves.all().order_by('-cnt')
+        data_json = serializers.serialize('json', data)
 
-    return JsonResponse(data_json, safe=False)
+        return JsonResponse(data_json, safe=False)
+    else:
+        try:
+            fen_data = ChessProcess.objects.get(fen=chess.Board().fen())
+        except:
+            return JsonResponse({"msg": "no data"})
+
+        data = fen_data.next_moves.all().order_by('-cnt')
+        data_json = serializers.serialize('json', data)
+
+        return JsonResponse(data_json, safe=False)
 
 
 @api.get('/eval_position')

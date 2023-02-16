@@ -102,42 +102,45 @@ class Processor:
 
 
 class MainlineProcessor:
-    def __init__(self, data: List[ChessNotation]) -> None:
+    def __init__(self, data: ChessNotation) -> None:
         self.data = data
         self.df = pd.DataFrame()
         self.current = None
 
         self.parse()
 
+    def process(self, next_move, result, fen):
+        try:
+            start = ChessProcess.objects.get(fen=fen)
+        except:
+            start = ChessProcess.objects.create(fen=fen)
+        try:
+            created_move = start.next_moves.get(next_move=next_move)
+        except:
+            created_move = ChessFenNextMoves.objects.create(
+                fen=start, white=0, draw=0, black=0, next_move=next_move, cnt=0)
+
+        created_move.cnt += 1
+        if result == 'white':
+            created_move.white += 1
+        elif result == 'black':
+            created_move.black += 1
+        else:
+            created_move.draw += 1
+
+        created_move.save()
+
     def parse(self):
+        i = self.data
+        print(i)
+        # for i in self.data:
+        board = chess.Board()
+        moves = i.mainline.split(',')
 
-        for i in self.data:
-            board = chess.Board()
-            moves = i.mainline.split(',')
-            for cnt in range(len(moves) - 1):
-                board.push_uci(moves[cnt])
-                fen = board.fen()
+        self.process(moves[0], i.result, board.fen())
 
-                try:
-                    data = ChessProcess.objects.get(fen=fen)
-                except:
-                    data = ChessProcess.objects.create(fen=fen)
+        for cnt in range(len(moves) - 1):
+            board.push_uci(moves[cnt])
+            fen = board.fen()
 
-                next_move = moves[cnt+1]
-
-                try:
-                    created_move = data.next_moves.get(next_move=next_move)
-
-                except:
-                    created_move = ChessFenNextMoves.objects.create(
-                        fen=data, white=0, draw=0, black=0, next_move=next_move, cnt=0)
-
-                created_move.cnt += 1
-                if i.result == 'white':
-                    created_move.white += 1
-                elif i.result == 'black':
-                    created_move.black += 1
-                else:
-                    created_move.draw += 1
-
-                created_move.save()
+            self.process(moves[cnt+1], i.result, fen)

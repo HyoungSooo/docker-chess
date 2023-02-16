@@ -8,10 +8,6 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         ChessPuzzles.objects.all().delete()
-        ChessELO.objects.all().delete()
         ChessFenNextMoves.objects.all().delete()
         ChessMainline.objects.all().delete()
-        ChessNotation.objects.all().delete()
-        ChessNotationCheckPoint.objects.all().delete()
-        ChessProcess.objects.all().delete()
         self.stdout.write(self.style.SUCCESS('Cleaning database'))
