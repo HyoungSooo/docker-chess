@@ -47,7 +47,7 @@ in docker-cronjob/docker-compose.yml
 - `chessapi/api/getdata` get all data
 - `chessapi/api/mainline?num=<value>` Convert pgn data as much as the value to data
 - `chessapi/api/movedata` get all movedata(which is parsed in /mainline)
-- `chessapi/api/get_moveline?uci=' '` Get the next move of the given uci.(it will change soon)
+- `chessapi/api/get_moveline?fen=' '` Get the next move of the given fen.
 - `chessapi/api/eval_position?fen=' '` eval position using stockfish
 - `chessapi/api/stockfish?fen=' '` get top moves (3) using stockfish
 
