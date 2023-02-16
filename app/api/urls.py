@@ -77,7 +77,7 @@ def get_data(request):
 
 @api.get('/mainline')
 def parse_mainline(request, num: int):
-    pool = Pool(4)
+    pool = Pool(3)
     first_pk = ChessNotation.objects.first()
     try:
         checkpoint = ChessMainline.objects.all()[0]
@@ -108,34 +108,21 @@ def get_move_data(request):
 
 
 @api.get('/get_moveline')
-def get_moveline(request, uci: str):
+def get_moveline(request, fen: str):
+    stockfish = get_stockfish()
 
-    if uci != '':
-        uci = uci.split(',')
-        board = chess.Board()
-        for i in uci:
-            board.push_uci(i)
+    if stockfish.is_fen_valid(fen):
+        stockfish.set_fen_position(fen)
+    try:
+        fen_data = ChessProcess.objects.get(fen=stockfish.get_fen_position())
 
-        try:
-            fen_data = ChessProcess.objects.get(fen=board.fen())
+    except:
+        return JsonResponse({"msg": "no data"})
 
-        except:
-            return JsonResponse({"msg": "no data"})
+    data = fen_data.next_moves.all().order_by('-cnt')
+    data_json = serializers.serialize('json', data)
 
-        data = fen_data.next_moves.all().order_by('-cnt')
-        data_json = serializers.serialize('json', data)
-
-        return JsonResponse(data_json, safe=False)
-    else:
-        try:
-            fen_data = ChessProcess.objects.get(fen=chess.Board().fen())
-        except:
-            return JsonResponse({"msg": "no data"})
-
-        data = fen_data.next_moves.all().order_by('-cnt')
-        data_json = serializers.serialize('json', data)
-
-        return JsonResponse(data_json, safe=False)
+    return JsonResponse(data_json, safe=False)
 
 
 @api.get('/eval_position')
@@ -155,6 +142,18 @@ def stockfish_recommend(request, fen: str):
         return stockfish.get_top_moves(3)
 
     return JsonResponse({'msg': 'fen is unvalid'})
+
+
+@api.get('/get_fen')
+def get_fen(request, fen: str, next: str):
+    stockfish = get_stockfish()
+
+    if stockfish.is_fen_valid(fen):
+        stockfish.set_fen_position(fen)
+        stockfish.make_moves_from_current_position([next])
+        return stockfish.get_fen_position()
+    else:
+        return 'fen is unvalid'
 
 
 urlpatterns = [

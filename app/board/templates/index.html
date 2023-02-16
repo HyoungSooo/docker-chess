@@ -75,7 +75,6 @@
   var $tableBody = $("#chess-moves-body");
   var $stockfishBody = $("#stockfish-moves-body");
 
-
   
   function removeGreySquares() {
     $("#myBoard .square-55d63").css("background", "");
@@ -134,7 +133,6 @@
     } else {
       $uci.html(nota);
     }
-
     updateStatus();
   }
 
@@ -169,7 +167,6 @@
   $undo.click(function(event){
     game.undo()
     const text = $uci.html()
-    console.log(text)
     if (text){
       let array = text.split(',')
       array.pop()
@@ -184,7 +181,7 @@
 
     $.ajax({
       type: "GET",  
-      url: "/chessapi/api/get_moveline?uci=" + $uci.html(),
+      url: "/chessapi/api/get_moveline?fen=" + $fen.html(),
       dataType: "json",
       error: function () {
         console.log("통신실패!!");
@@ -275,7 +272,7 @@
   }
 
 
-  function updateStatus() {
+  function updateStatus(next) {
     var status = "";
 
     var moveColor = "White";
@@ -304,11 +301,10 @@
     }
 
     $status.html(status);
-    $fen.html(game.fen());
+    $fen.html(game.fen())
     $pgn.html(game.pgn());
-    console.log(game.history())
-    getEval()
     getData()
+    getEval()
     getStockFish()
   }
 
@@ -324,10 +320,11 @@
   board = Chessboard("myBoard", config);
 
   $("#setresetBtn").on("click", function () {
-    board.start()
+    board.start();
     game.reset();
     $pgn.empty();
     $uci.empty();
+    $fen.empty();
     updateStatus();
   });
 

@@ -132,7 +132,6 @@ class MainlineProcessor:
 
     def parse(self):
         i = self.data
-        print(i)
         # for i in self.data:
         board = chess.Board()
         moves = i.mainline.split(',')
