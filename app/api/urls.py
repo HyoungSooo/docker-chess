@@ -15,6 +15,7 @@ import chess
 from django.conf import settings
 from multiprocessing import Pool
 
+
 api = NinjaAPI()
 
 
@@ -154,6 +155,18 @@ def get_fen(request, fen: str, next: str):
         return stockfish.get_fen_position()
     else:
         return 'fen is unvalid'
+
+
+@api.get('/battle_stockfish')
+def stockfish_battle(request, level: int, depth: int, fen: str):
+    stockfish = get_stockfish()
+    stockfish.set_skill_level(level)
+    stockfish.set_depth(depth)
+
+    if stockfish.is_fen_valid(fen=fen):
+        stockfish.set_fen_position(fen)
+
+    return stockfish.get_best_move_time(1000)
 
 
 urlpatterns = [

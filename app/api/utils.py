@@ -15,6 +15,7 @@ def get_stockfish():
 
     stockfish = Stockfish(
         path=file_dir + '/stockfish_10_x64')
+    stockfish.update_engine_parameters({'Hash': 1024})
 
     return stockfish
 
