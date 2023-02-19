@@ -113,7 +113,10 @@ class MainlineProcessor:
         try:
             start = ChessProcess.objects.get(fen=fen)
         except:
-            start = ChessProcess.objects.create(fen=fen)
+            try:
+                start = ChessProcess.objects.create(fen=fen)
+            except:
+                return
         try:
             created_move = start.next_moves.get(next_move=next_move)
         except:

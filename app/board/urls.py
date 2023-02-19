@@ -22,4 +22,5 @@ from django.views.generic import TemplateView
 urlpatterns = [
     path('', TemplateView.as_view(template_name='index.html')),
     path('battle/', TemplateView.as_view(template_name='stockfish.html')),
+    path('puzzle/', TemplateView.as_view(template_name='puzzle.html')),
 ]
