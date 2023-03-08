@@ -19,6 +19,7 @@ import random
 from django.db.models import Q, Count
 
 
+
 api = NinjaAPI()
 
 
@@ -152,6 +153,7 @@ def stockfish_battle(request, level: int, depth: int, fen: str):
     stockfish.set_skill_level(level)
     stockfish.set_depth(depth)
 
+<<<<<<< HEAD
     stockfish = is_fen_valid(stockfish, fen)
     if stockfish:
 
@@ -253,6 +255,12 @@ def get_other_related_opening(request, opening: str):
         'name', 'fen', 'uci').distinct('name'))
 
     return JsonResponse(data, safe=False)
+=======
+    if stockfish.is_fen_valid(fen=fen):
+        stockfish.set_fen_position(fen)
+
+    return stockfish.get_best_move_time(1000)
+>>>>>>> b2630fe1222f24464e465bd17e382232432cb563
 
 
 urlpatterns = [

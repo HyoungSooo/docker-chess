@@ -21,6 +21,7 @@ from .views import *
 
 
 urlpatterns = [
+<<<<<<< HEAD
     path('', TemplateView.as_view(template_name='index.html'), name='home'),
     path('analyze/', TemplateView.as_view(template_name='analyze.html'), name='analyze'),
     path('battle/', TemplateView.as_view(template_name='stockfish.html'), name='battle'),
@@ -41,4 +42,9 @@ urlpatterns = [
          name='opening_detail_puzzle'),
     path('opening/<str:name>/stratigy/puzzle/', opening_stratigy_puzzle,
          name='opening_stratigy_puzzle'),
+=======
+    path('', TemplateView.as_view(template_name='index.html')),
+    path('battle/', TemplateView.as_view(template_name='stockfish.html')),
+    path('puzzle/', TemplateView.as_view(template_name='puzzle.html')),
+>>>>>>> b2630fe1222f24464e465bd17e382232432cb563
 ]
