@@ -1,0 +1,361 @@
+{% extends 'base.html' %} {% load static %} 
+
+{% block content %}
+<style>
+  .square {
+  width: 50px;
+  height: 50px;
+  border: 1px solid black;
+  display: inline-block;
+}
+</style>
+
+<div style = 'display :flex; justify-content : space-evenly;'>
+  <div>
+    <div id="myBoard" style="width: 500px; margin: 0"></div>
+    <button id="setresetBtn">Reset Position</button>
+    <button id="undo">undo</button>
+    <button id="submit">submit</button>
+    <button id="hint">hint</button>
+    <button id="return">return</button>
+    <button id="next">next</button>
+    
+  </div>
+  <div> 
+    <label>Opening Name:</label>
+    <div id="op"></div>
+    <label for="eval">eval:</label>
+    <div id="eval" name="eval"></div>
+    <label>Try</label>
+    <div id="try">0</div>
+    <label>PGN:</label>
+    <div
+      id="pgn"
+      class="block w-24 whitespace-normal break-words"
+      style="word-wrap: break-word; width: 500px"
+    ></div>
+    <div
+      id="uci"
+      class="block w-24 whitespace-normal break-words"
+      style="word-wrap: break-word; width: 500px; display:none;"
+    ></div>
+    <div id='container'></div>
+    
+  </div>
+</div>
+{% endblock content %} {% block script %}
+<script defer>
+  // NOTE: this example uses the chess.js library:
+  // https://github.com/jhlywa/chess.js
+
+  // NOTE: this example uses the chess.js library:
+  // https://github.com/jhlywa/chess.js
+  var data = {
+    name :'',
+    uci:'',
+    fen : ''
+  }
+
+  var board = null;
+  var game = new Chess();
+  var whiteSquareGrey = "#a9a9a9";
+  var blackSquareGrey = "#696969";
+  var $status = $("#status");
+  var $fen = $("#fen");
+  var $pgn = $("#pgn");
+  var $uci = $("#uci");
+  var $undo = $("#undo");
+  var $opening = $("#op");
+  var $submit = $("#submit")
+  var $try = $("#try")
+  var $hint = $("#hint")
+  var $return = $("#return")
+  var $next = $("#next")
+  var $eval = $("#eval")
+  var openingName = '{{name}}'.replace('_', ' ').replace('.', `'`)
+  const $container = $('#container');
+
+  $(document).ready(function(){
+    $return.css({'display':'none'})
+    $next.css({'display':'none'})
+    if (!openingName){
+      getOpening()
+    } else {
+      getSpecificOpening()
+    }
+    
+  })
+
+
+  function removeGreySquares() {
+    $("#myBoard .square-55d63").css("background", "");
+  }
+
+  function greySquare(square) {
+    var $square = $("#myBoard .square-" + square);
+
+    var background = whiteSquareGrey;
+    if ($square.hasClass("black-3c85d")) {
+      background = blackSquareGrey;
+    }
+
+    $square.css("background", background);
+  }
+
+  function onDragStart(source, piece) {
+    console.log(source, piece)
+    // do not pick up pieces if the game is over
+    if (game.isGameOver()) return false;
+
+    // or if it's not that side's turn
+    if (
+      (game.turn() === "w" && piece.search(/^b/) !== -1) ||
+      (game.turn() === "b" && piece.search(/^w/) !== -1)
+    ) {
+      return false;
+    }
+  }
+
+  function onDrop(source, target) {
+    removeGreySquares();
+    if ($uci.html().split(",").length === data.uci.length){
+      return 'snapback'
+    }
+    var nota = "";
+
+    // see if the move is legal
+    var move = game.move({
+      from: source,
+      to: target,
+      // NOTE: always promote to a queen for example simplicity
+    });
+    nota = source + target;
+    // illegal move
+    if (move === null) {
+      var move = game.move({
+        from: source,
+        to: target,
+        promotion: "q", // NOTE: always promote to a queen for example simplicity
+      });
+      nota = source + target + "q";
+    }
+    if (move === null) return "snapback";
+
+    var cur = $uci.html();
+    
+    
+    if (cur) {
+      setSquareText(cur.split(",").length, nota) 
+      $uci.html(cur + "," + nota);
+    } else {
+      setSquareText(0, nota) 
+      $uci.html(nota);
+    }
+    updateStatus();
+  }
+  function setSquareText(squareIndex, text) {
+    $(`#square-${$try.text()}` + squareIndex).text(text);
+  }
+  function delSquareText(squareIndex) {
+    $(`#square-${$try.text()}` + squareIndex).empty();
+  }
+
+  function onMouseoverSquare(square, piece) {
+    // get list of possible moves for this square
+    var moves = game.moves({
+      square: square,
+      verbose: true,
+    });
+
+    // exit if there are no moves available for this square
+    if (moves.length === 0) return;
+
+    // highlight the square they moused over
+    greySquare(square);
+
+    // highlight the possible squares for this piece
+    for (var i = 0; i < moves.length; i++) {
+      greySquare(moves[i].to);
+    }
+  }
+
+  function onMouseoutSquare(square, piece) {
+    removeGreySquares();
+  }
+
+  function onSnapEnd() {
+    board.position(game.fen());
+  }
+
+  $undo.click(function(event){
+    game.undo()
+    const text = $uci.html()
+    if (text){
+      let array = text.split(',')
+      array.pop()
+      delSquareText(array.length)
+      $uci.html(array.join())
+    }
+    onSnapEnd()
+    updateStatus()
+  })
+  function clickEvent(square){
+    square.click(function(event){
+      let target = event.target;
+      onDrop(target.textContent.slice(0,2), target.textContent.slice(2,4))
+      onSnapEnd()
+    })
+  }
+
+  function isCorrect(){
+    let cnt = 0;
+    for (i in data.uci){
+      var $sq = $(`#square-${$try.text()}` + i)
+
+      if ($sq.text() === data.uci[i]){
+        $sq.css('backgroundColor', '#7CFC00');
+        cnt = cnt + 1
+      } else if (data.uci.includes($sq.text())){
+        $sq.css('backgroundColor', '#FFFF00');
+      } else {
+        $sq.css('backgroundColor', '#FF0000')
+      }
+      clickEvent($sq)
+    
+    }
+  if (cnt === data.uci.length){
+      $next.css({'display':'inline-block'})
+      eval()
+      return true
+    } else {
+      return false
+    }
+  }
+  function reset() {
+    board.start();
+    game.reset();
+    $uci.empty();
+    for (i in data.uci){
+      delSquareText(i);
+    }
+    updateStatus();
+  }
+
+  function gameStart(){    
+    
+    const $div = $('<div></div>')
+    for (i in data.uci){
+      const squareHTML = `<div id="square-${$try.text()}${i}" class="square" style='margin-left:10px'></div>`;
+
+        // 네모를 추가
+      $div.append(squareHTML) 
+      $container.append($div)
+    $opening.html(data.name)
+  }
+  }
+
+  $submit.click(function(event){
+    if ($uci.html().split(",").length === data.uci.length){
+      res = isCorrect()
+      if (!res){
+        $try.text(Number($try.text()) + 1)
+        gameStart()
+        reset()
+      }
+    } else {
+      
+      return
+    }
+  })
+
+  $next.click(function(event){
+    $container.empty()
+    getOpening()
+    reset()
+  })
+
+  function getOpening(){
+    $.ajax({
+    type: "GET",
+    url: "/chessapi/api/opening",
+    dataType: "json",
+    error: function () {
+      console.log("통신실패!!");
+    },
+    success: function (opening) {
+      console.log(opening)
+      data.uci = opening[0].fields.uci.split(',')
+      data.name = opening[0].fields.name
+      data.fen = opening[0].fields.fen
+      gameStart()
+    },
+  });
+  }
+  function getSpecificOpening(){
+    $.ajax({
+    type: "GET",
+    url: `/chessapi/api/opening_one?name=${openingName}`,
+    dataType: "json",
+    error: function () {
+      console.log("통신실패!!");
+    },
+    success: function (opening) {
+      console.log(opening)
+      data.uci = opening.uci.split(',')
+      data.name = opening.name
+      data.fen = opening.fen
+      gameStart()
+    },
+  });
+  }
+   function eval(){
+    $.ajax({
+    type: "GET",
+    url: "/chessapi/api/eval_position?fen=" + game.fen(),
+    dataType: "json",
+    error: function () {
+      console.log("통신실패!!");
+    },
+    success: function (data) {
+      console.log(data)
+      $eval.html("type : " + data.type  + " value : " + data.value)
+    },
+  });
+
+  }
+
+
+  function updateStatus(next) {
+
+    $fen.html(game.fen())
+    $pgn.html(game.pgn());
+  }
+
+  var config = {
+    draggable: true,
+    position: "start",
+    onDragStart: onDragStart,
+    onDrop: onDrop,
+    onMouseoutSquare: onMouseoutSquare,
+    onMouseoverSquare: onMouseoverSquare,
+    onSnapEnd: onSnapEnd,
+  };
+  board = Chessboard("myBoard", config);
+
+  $("#setresetBtn").on("click", function () {
+    reset()
+  });
+  $('#hint').on('click', function () {
+    board.position(data.fen)
+    $return.css({'display':'inline-block'})
+  }) 
+  $('#return').on('click', function(){
+    $return.css({'display':'none'})
+    board.position(game.fen())
+  })
+
+  updateStatus();
+  
+ 
+</script>
+{% endblock script %}

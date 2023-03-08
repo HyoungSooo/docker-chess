@@ -17,8 +17,28 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.views.generic import TemplateView
+from .views import *
 
 
 urlpatterns = [
-    path('', TemplateView.as_view(template_name='index.html')),
+    path('', TemplateView.as_view(template_name='index.html'), name='home'),
+    path('analyze/', TemplateView.as_view(template_name='analyze.html'), name='analyze'),
+    path('battle/', TemplateView.as_view(template_name='stockfish.html'), name='battle'),
+    path('puzzle/', TemplateView.as_view(template_name='puzzle_index.html'), name='puzzle'),
+    path('puzzle/opening', TemplateView.as_view(template_name='puzzle_opening.html'),
+         name='opening_puzzle'),
+    path('puzzle/theme', ThemeListView.as_view(),
+         name='puzzle_theme'),
+    path('puzzle/theme/<str:theme>/', theme_detail,
+         name='theme_detail'),
+    path('puzzle/<str:category>/', theme_detail_all,
+         name='theme_detail_all'),
+    path('opening/', opening_list,
+         name='opening_all'),
+    path('opening/<str:name>/', opening_detail,
+         name='opening_detail'),
+    path('opening/<str:name>/puzzle/', opening_detail_puzzle,
+         name='opening_detail_puzzle'),
+    path('opening/<str:name>/stratigy/puzzle/', opening_stratigy_puzzle,
+         name='opening_stratigy_puzzle'),
 ]

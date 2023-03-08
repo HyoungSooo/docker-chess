@@ -40,8 +40,8 @@ services:
 
   cron_parse:
     build: ./docker-cronjob
-    environment:
-      - CRON_ENTRY=* * * * * python /app/script_for_parse.py
+    # environment:
+    #   - CRON_ENTRY=* * * * * python /app/script_for_parse.py
     volumes:
       - ./docker-cronjob/app:/app
 
@@ -50,8 +50,8 @@ services:
 
   cron_mainline:
     build: ./docker-cronjob
-    environment:
-      - CRON_ENTRY=* * * * * python /app/script_for_mainline.py
+    # environment:
+    #   - CRON_ENTRY=* * * * * python /app/script_for_mainline.py
     volumes:
       - ./docker-cronjob/app:/app
 

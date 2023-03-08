@@ -1,0 +1,313 @@
+{% extends 'base.html' %} {% load static %} {% block content %}
+
+<div
+  style="
+    display: flex;
+    justify-content: space-evenly;
+    align-items: center;
+    height: 90vh;
+  "
+>
+  <div>
+    <form>
+      <div class="form-example">
+        <label for="name">stockfish skill level: </label>
+        <input type="text" name="name" id="name" />
+      </div>
+      <div class="form-example">
+        <label for="email">stockfish depth: </label>
+        <input type="email" name="email" id="email" />
+      </div>
+    </form>
+  </div>
+  <div>
+    <div id="board_wrapper">
+        <canvas id="primary_canvas" width="392" height="392" ></canvas>
+        <canvas id="drawing_canvas"  width="392" height="392" ></canvas>
+        <div id="myBoard" style="width: 500px; margin: 0"></div>
+    </div>
+    <button id="setresetBtn">Reset Position</button>
+    <button id="undo">undo</button>
+  </div>
+  <div>
+    <label for="eval">eval:</label>
+    <div id="eval" name="eval"></div>
+    <label for="status">Status:</label>
+    <div id="status" name="status"></div>
+    <label for="fen">FEN:</label>
+    <div id="fen" name="fen"></div>
+    <label for="pgn">PGN:</label>
+    <div
+      id="pgn"
+      name="pgn"
+      class="block w-24 whitespace-normal break-words"
+      style="word-wrap: break-word; width: 500px"
+    ></div>
+    <label>UCI:</label>
+    <div
+      id="uci"
+      class="block w-24 whitespace-normal break-words"
+      style="word-wrap: break-word; width: 500px"
+    ></div>
+  </div>
+</div>
+{% endblock content %} {% block script %}
+<script defer>
+  // NOTE: this example uses the chess.js library:
+  // https://github.com/jhlywa/chess.js
+
+  // NOTE: this example uses the chess.js library:
+  // https://github.com/jhlywa/chess.js
+
+  var board = null;
+  var game = new Chess();
+  var whiteSquareGrey = "#a9a9a9";
+  var blackSquareGrey = "#696969";
+  var $status = $("#status");
+  var $fen = $("#fen");
+  var $pgn = $("#pgn");
+  var $uci = $("#uci");
+  var $undo = $("#undo");
+  var $eval = $("#eval")
+  
+
+  function removeGreySquares() {
+    $("#myBoard .square-55d63").css("background", "");
+  }
+
+  function greySquare(square) {
+    var $square = $("#myBoard .square-" + square);
+
+    var background = whiteSquareGrey;
+    if ($square.hasClass("black-3c85d")) {
+      background = blackSquareGrey;
+    }
+
+    $square.css("background", background);
+  }
+
+  function onDragStart(source, piece) {
+    console.log(source, piece);
+    // do not pick up pieces if the game is over
+    if (game.isGameOver()) return false;
+
+    // or if it's not that side's turn
+    if (
+      (game.turn() === "w" && piece.search(/^b/) !== -1) ||
+      (game.turn() === "b" && piece.search(/^w/) !== -1)
+    ) {
+      return false;
+    }
+  }
+
+  function onDrop(source, target) {
+    const level = document.querySelector("#name");
+    const depth = document.querySelector("#email");
+
+    if (
+      !level.value ||
+      isNaN(level.value) == true ||
+      !depth.value ||
+      isNaN(depth.value) == true
+    ) {
+      return "snapback";
+    }
+    removeGreySquares();
+    var nota = "";
+
+    // see if the move is legal
+    var move = game.move({
+      from: source,
+      to: target,
+      // NOTE: always promote to a queen for example simplicity
+    });
+    nota = source + target;
+    // illegal move
+    if (move === null) {
+      var move = game.move({
+        from: source,
+        to: target,
+        promotion: "q", // NOTE: always promote to a queen for example simplicity
+      });
+      nota = source + target + "q";
+    }
+    if (move === null) return "snapback";
+
+    var cur = $uci.html();
+    if (cur) {
+      $uci.html(cur + "," + nota);
+    } else {
+      $uci.html(nota);
+    }
+    updateStatus();
+
+    window.setTimeout(
+      battleStockfish,
+      250,
+      level.value,
+      depth.value,
+      $fen.html()
+    );
+  }
+  function makeRandomMove() {
+    var possibleMoves = game.moves();
+
+    // game over
+    if (possibleMoves === None) return;
+
+    var randomIdx = Math.floor(Math.random() * possibleMoves.length);
+    game.move(possibleMoves[randomIdx]);
+    board.position(game.fen());
+  }
+
+  function onMouseoverSquare(square, piece) {
+    // get list of possible moves for this square
+    var moves = game.moves({
+      square: square,
+      verbose: true,
+    });
+
+    // exit if there are no moves available for this square
+    if (moves.length === 0) return;
+
+    // highlight the square they moused over
+    greySquare(square);
+
+    // highlight the possible squares for this piece
+    for (var i = 0; i < moves.length; i++) {
+      greySquare(moves[i].to);
+    }
+  }
+  function battleStockfish(level, depth, fen) {
+    $.ajax({
+      type: "GET",
+      url:
+        "/chessapi/api/battle_stockfish?level=" +
+        level +
+        "&depth=" +
+        depth +
+        "&fen=" +
+        fen,
+      dataType: "json",
+      error: function () {
+        console.log("통신실패!!");
+      },
+      success: function (data) {
+        console.log(data);
+        var move = game.move({
+          from: data.slice(0, 2),
+          to: data.slice(2, 4),
+        });
+        if (move === null) return "snapback";
+        board.position(game.fen());
+        updateStatus();
+      },
+    });
+  }
+
+  function onMouseoutSquare(square, piece) {
+    removeGreySquares();
+  }
+
+  function onSnapEnd() {
+    board.position(game.fen());
+  }
+
+  $undo.click(function (event) {
+    if (game.turn() == "b") {
+      return;
+    }
+    game.undo();
+    game.undo();
+    const text = $uci.html();
+    if (text) {
+      let array = text.split(",");
+      array.pop();
+      array.pop();
+      $uci.html(array.join());
+    }
+    onSnapEnd();
+    updateStatus();
+  });
+
+  function updateStatus(next) {
+    var status = "";
+
+    var moveColor = "White";
+    if (game.turn() === "b") {
+      moveColor = "Black";
+    }
+
+    // checkmate?
+    if (game.isCheckmate()) {
+      status = "Game over, " + moveColor + " is in checkmate.";
+    }
+
+    // draw?
+    else if (game.isDraw()) {
+      status = "Game over, drawn position";
+    }
+
+    // game still on
+    else {
+      status = moveColor + " to move";
+
+      // check?
+      if (game.isCheck()) {
+        status += ", " + moveColor + " is in check";
+      }
+    }
+
+    $status.html(status);
+    $fen.html(game.fen());
+    $pgn.html(game.pgn());
+    eval()  
+    
+  }
+  function eval(){
+    $.ajax({
+    type: "GET",
+    url: "/chessapi/api/eval_position?fen=" + $fen.html(),
+    dataType: "json",
+    error: function () {
+      console.log("통신실패!!");
+    },
+    success: function (data) {
+      console.log(data)
+      $eval.html("type : " + data.type  + " value : " + data.value)
+    },
+  });
+
+  }
+
+  var config = {
+    draggable: true,
+    position: "start",
+    onDragStart: onDragStart,
+    onDrop: onDrop,
+    onMouseoutSquare: onMouseoutSquare,
+    onMouseoverSquare: onMouseoverSquare,
+    onSnapEnd: onSnapEnd,
+  };
+  board = Chessboard("myBoard", config);
+
+  $("#setresetBtn").on("click", function () {
+    board.start();
+    game.reset();
+    $pgn.empty();
+    $uci.empty();
+    $fen.empty();
+    updateStatus();
+  });
+
+  $("#whiteOrientationBtn").on("click", function () {
+    board.orientation("white");
+  });
+
+  $("#blackOrientationBtn").on("click", function () {
+    board.orientation("black");
+  });
+  updateStatus();
+  var overlay = new ChessboardArrows('board_wrapper');
+</script>
+{% endblock script %}

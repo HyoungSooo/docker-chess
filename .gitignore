@@ -3,6 +3,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+app/.config
+app/lichess_db_puzzle.csv
 # C extensions
 *.so
 app/data/*

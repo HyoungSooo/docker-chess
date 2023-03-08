@@ -1,0 +1,482 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+
+<style type="text/css">
+.highlight-current {
+  box-shadow: inset 0 0 3px 3px yellow;
+}
+.highlight-check{
+  box-shadow: inset 0 0 3px 3px red;
+}
+</style>
+
+<div class= 'flex justify-evenly'>
+  <div class = "flex flex-col">
+    <div id="myBoard" style='width:500px;'></div>
+    <button id='advance' class="group relative h-6 w-20 overflow-hidden rounded-lg bg-white text-lg shadow">
+      <div class="absolute inset-0 w-3 bg-amber-400 transition-all duration-[250ms] ease-out group-hover:w-full"></div>
+      <span class="relative text-black group-hover:text-white text-sm text-center">Advance</span>
+    </button>
+    <button id='destroy' class="group relative h-6 w-20 overflow-hidden rounded-lg bg-white text-lg shadow">
+      <div class="absolute inset-0 w-3 bg-amber-400 transition-all duration-[250ms] ease-out group-hover:w-full"></div>
+      <span class="relative text-black group-hover:text-white text-sm text-center">Distroy</span>
+    </button>
+  </div>
+  <div id='circle' class='flex flex-wrap w-80'></div>
+  <div class='flex flex-col hidden' id='subcontainer'>
+    <div id="subBoard" style='width:500px;'></div>
+  </div>
+</div>
+<div id="menu" class="w-full h-full bg-gray-900 bg-opacity-80 top-0 fixed sticky-0 hidden">
+    <div class="2xl:container  2xl:mx-auto my-32 px-4 md:px-28 flex justify-center items-center">
+      <div class="w-96 md:w-auto dark:bg-gray-800 relative flex flex-col justify-center items-center bg-white py-16 px-4 md:px-24 xl:py-24 xl:px-36">
+        <div class="mt-12">
+          <h1 id="main" class="text-3xl dark:text-white lg:text-4xl font-semibold leading-7 lg:leading-9 text-center text-gray-800">We use cookies</h1>
+        </div>
+        <button id='retry'class="w-full dark:text-gray-800 dark:hover:bg-gray-100 dark:bg-white sm:w-auto mt-14 text-base leading-4 text-center text-white py-6 px-16 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-800 bg-gray-800 hover:bg-black">Retry?</button>
+        <button onclick="showMenu(true)" class="text-gray-800 dark:text-gray-400 absolute top-8 right-8 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-800" aria-label="close">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M18 6L6 18" stroke="currentColor" stroke-width="1.66667" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M6 6L18 18" stroke="currentColor" stroke-width="1.66667" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+{% endblock content %}
+
+{% block script %}
+<script>
+  // NOTE: this example uses the chess.js library:
+// https://github.com/jhlywa/chess.js
+
+  var board = null
+  var game = new Chess()
+  var whiteSquareGrey = "#a9a9a9";
+  var blackSquareGrey = "#696969";
+  var currentTheme = 'all'
+  var $board = $('#myBoard')
+  var subboard = null
+  var squareClass = 'square-55d63'
+  var moves = '';
+  var currentMovesCnt = 0;
+  var currentWrong = 0;
+  var correct = 0;
+
+  let menu = document.getElementById("menu");
+  const showMenu = (flag) => {
+    menu.classList.toggle("hidden");
+  };
+
+  function addCirclesGreen() {
+    const circle = `<button class="max-w-xs rounded-full flex items-center text-sm focus:outline-none relative">
+      <span class='h-6 w-6 rounded-full bg-emerald-500 ring ring-white'></span>
+    </button>`
+
+    $('#circle').append(circle)
+  }
+
+  function addCirclesRed() {
+    const circle = `<button class="max-w-xs rounded-full flex items-center text-sm focus:outline-none relative">
+      <span class='h-6 w-6 rounded-full bg-red-500 ring ring-white'></span>
+    </button>`
+
+    $('#circle').append(circle)
+  }
+
+  const get_piece_positions = (game, piece) => {
+    return [].concat(...game.board()).map((p, index) => {
+      if (p !== null && p.type === piece.type && p.color === piece.color) {
+        return index
+      }
+    }).filter(Number.isInteger).map((piece_index) => {
+      const row = 'abcdefgh'[piece_index % 8]
+      const column = Math.ceil((64 - piece_index) / 8)
+      return row + column
+    })
+  }
+
+  
+
+  function removeHighlights () {
+    $board.find('.' + squareClass)
+      .removeClass('highlight-current')
+  }
+  function addHighlights(from, to){
+    $board.find('.square-' + from).addClass('highlight-current')
+    $board.find('.square-' + to).addClass('highlight-current')
+  }
+
+  function addHighlightsInCheck(position){
+    $board.find('.square-' + position).addClass('highlight-check')
+  }
+
+
+  $(document).ready(function(){
+    getPuzzle();
+  })
+
+  function nextMove(){
+    console.log(12)
+    if (moves.length === currentMovesCnt){
+      addCirclesGreen()
+      correct += 1
+      setTimeout(
+        getPuzzle(), 500
+      )
+      return
+    }
+    removeHighlights()
+    var nextMoves = {
+      from: moves[currentMovesCnt].slice(0,2),
+      to: moves[currentMovesCnt].slice(2,4),
+    }
+
+    setTimeout(function() {
+            
+      var move = game.move({
+        from: nextMoves.from,
+        to: nextMoves.to,
+      });
+      if (move === null) return "snapback";
+
+      board.position(game.fen());
+      addHighlights(move.from, move.to)
+      currentMovesCnt += 1
+      
+      updateStatus();
+    }, 500);
+  }
+
+  function removeGreySquares() {
+    $("#myBoard .square-55d63").css("background", "");
+  }
+
+  function greySquare(square) {
+    var $square = $("#myBoard .square-" + square);
+
+    var background = whiteSquareGrey;
+    if ($square.hasClass("black-3c85d")) {
+      background = blackSquareGrey;
+    }
+
+    $square.css("background", background);
+  }
+
+  function onDragStart(source, piece) {
+    // do not pick up pieces if the game is over
+    if (game.isGameOver()) return false;
+
+    // or if it's not that side's turn
+    if (
+      (game.turn() === "w" && piece.search(/^b/) !== -1) ||
+      (game.turn() === "b" && piece.search(/^w/) !== -1)
+    ) {
+      return false;
+    }
+  }
+
+  function onDrop(source, target) {
+    removeGreySquares();
+
+    var next = moves[currentMovesCnt]
+    var nota = "";
+
+    // see if the move is legal
+    var move = game.move({
+      from: source,
+      to: target,
+      // NOTE: always promote to a queen for example simplicity
+    });
+    nota = source + target;
+    // illegal move
+    if (move === null) {
+      var move = game.move({
+        from: source,
+        to: target,
+        promotion: "q", // NOTE: always promote to a queen for example simplicity
+      });
+      nota = source + target + "q";
+    }
+    if (move === null){
+      return "snapback"
+    } ;
+
+    if (source+target !== next){
+      addCirclesRed()
+      if (currentWrong >= 2){
+        board.clear(false)
+        $('#main').html(`Correct : ${correct}`)
+        showMenu(true)
+
+        return 'snapback';
+      } else {
+        currentWrong += 1
+
+        board.clear(false)
+        game.reset()
+        getPuzzle()
+        return false;
+      }
+    }
+
+    removeHighlights();
+    addHighlights(source, target)
+    currentMovesCnt += 1
+    nextMove()
+
+    updateStatus()
+  }
+
+
+  function onMouseoverSquare(square, piece) {
+    // get list of possible moves for this square
+    var moves = game.moves({
+      square: square,
+      verbose: true,
+    });
+
+    // exit if there are no moves available for this square
+    if (moves.length === 0) return;
+
+    // highlight the square they moused over
+    greySquare(square);
+
+    // highlight the possible squares for this piece
+    for (var i = 0; i < moves.length; i++) {
+      greySquare(moves[i].to);
+    }
+  }
+
+  function onMouseoutSquare(square, piece) {
+    removeGreySquares();
+  }
+
+  function onSnapEnd() {
+    board.position(game.fen());
+  }
+
+
+  function getPuzzle(){
+      $.ajax({
+        type: "GET", 
+        url: "/chessapi/api/puzzle?theme=" + currentTheme,
+        dataType: "json",
+        error: function () {
+          console.log("통신실패!!");
+        },
+        success: function (data) {
+          game.load(data.fen__fen)
+          board.position(data.fen__fen, false)
+          if (game.turn() == 'b'){
+            board.orientation('white')
+          } else {
+            board.orientation('black')
+          }
+          moves = data.moves.split(' ')
+          currentMovesCnt = 0
+          
+          nextMove()
+          
+        },
+      });
+  }
+
+
+
+  function updateStatus(next) {
+
+    var moveColor = "White";
+    if (game.turn() === "b") {
+      moveColor = "Black";
+    }
+
+    // check?
+    if (game.isCheck()) {
+      status += ", " + moveColor + " is in check";
+      const kingPosition = get_piece_positions(game, {type: "k", color:game.turn()})
+      addHighlightsInCheck(kingPosition[0])
+    } else {
+      $board.find('.' + squareClass)
+        .removeClass('highlight-check')
+
+    }
+  }
+
+  
+
+  var config = {
+    draggable: true,
+    position: "start",
+    onDragStart: onDragStart,
+    onDrop: onDrop,
+    onMouseoutSquare: onMouseoutSquare,
+    onMouseoverSquare: onMouseoverSquare,
+    onSnapEnd: onSnapEnd,
+  };
+  board = Chessboard("myBoard", config);
+
+  
+  
+
+
+
+  $("#retry").on("click", function () {
+    updateStatus()
+    getPuzzle()
+    currentWrong = 0;
+    correct = 0;
+    showMenu()
+    $('#circle').empty()
+  });
+
+  function subremoveGreySquares () {
+    $('#subBoard .square-55d63').css('background', '')
+  }
+
+  function subgreySquare (square) {
+    var $square = $('#subBoard .square-' + square)
+
+    var background = whiteSquareGrey
+    if ($square.hasClass('black-3c85d')) {
+      background = blackSquareGrey
+    }
+
+    $square.css('background', background)
+  }
+  function subonMouseoutSquare (square, piece) {
+    subremoveGreySquares()
+  }
+  function subonMouseoverSquare (square, piece) {
+  // get list of possible moves for this square
+    var moves = subGame.moves({
+      square: square,
+      verbose: true
+    })
+
+    // exit if there are no moves available for this square
+    if (moves.length === 0) return
+
+    // highlight the square they moused over
+    subgreySquare(square)
+
+    // highlight the possible squares for this piece
+    for (var i = 0; i < moves.length; i++) {
+      subgreySquare(moves[i].to)
+    }
+  }
+
+
+  function subOnDragStart (source, piece, position, orientation) {
+  // do not pick up pieces if the game is over
+  if (subGame.isGameOver()) return false
+
+  // only pick up pieces for the side to move
+  if ((subGame.turn() === 'w' && piece.search(/^b/) !== -1) ||
+      (subGame.turn() === 'b' && piece.search(/^w/) !== -1)) {
+    return false
+  }
+}
+
+function subOnDrop (source, target) {
+  // see if the move is legal
+    var move = subGame.move({
+          from: source,
+          to: target,
+          // NOTE: always promote to a queen for example simplicity
+        });
+        // illegal move
+        if (move === null) {
+          var move = subGame.move({
+            from: source,
+            to: target,
+            promotion: "q", // NOTE: always promote to a queen for example simplicity
+          });
+        }
+        if (move === null){
+          return "snapback"
+        } ;
+    subremoveHighlights();
+    subaddHighlights(source, target)
+    subupdateStatus()
+
+  }
+
+// update the board position after the piece snap
+// for castling, en passant, pawn promotion
+  function subOnSnapEnd () {
+    subboard.position(subGame.fen())
+  }
+
+
+  var $subBoard = $('#subBoard');
+  function subremoveHighlights () {
+    $subBoard.find('.' + squareClass)
+      .removeClass('highlight-current')
+  }
+  function subaddHighlights(from, to){
+    $subBoard.find('.square-' + from).addClass('highlight-current')
+    $subBoard.find('.square-' + to).addClass('highlight-current')
+  }
+
+  function subaddHighlightsInCheck(position){
+    $subBoard.find('.square-' + position).addClass('highlight-check')
+  }
+
+  function subupdateStatus(next) {
+
+    var moveColor = "White";
+    if (subGame.turn() === "b") {
+      moveColor = "Black";
+    }
+
+    // check?
+    if (subGame.isCheck()) {
+      status += ", " + moveColor + " is in check";
+      const kingPosition = get_piece_positions(subGame, {type: "k", color:subGame.turn()})
+      subaddHighlightsInCheck(kingPosition[0])
+    } else {
+      $subBoard.find('.' + squareClass)
+        .removeClass('highlight-check')
+
+    }
+  }
+
+
+
+  var subConfig = {
+    draggable: true,
+    onDragStart: subOnDragStart,
+    onDrop: subOnDrop,
+    onMouseoutSquare: subonMouseoutSquare,
+    onMouseoverSquare: subonMouseoverSquare,
+    onSnapEnd: subOnSnapEnd,
+  }
+
+  var subGame = new Chess()
+  
+  $("#advance").on("click", function () {
+    subboard= Chessboard("subBoard", subConfig);
+    subGame.load(game.fen())
+    subboard.position(game.fen())
+    if (game.turn() == 'b'){
+      subboard.orientation('black')
+    } else {
+      subboard.orientation('white')
+    }
+    $('#circle').addClass('hidden')
+    $('#subcontainer').removeClass('hidden')
+  });
+  $("#destroy").on("click", function () {
+    subboard.destroy()
+    $('#circle').removeClass('hidden')
+    $('#subcontainer').addClass('hidden')
+  });
+
+
+
+</script>
+{% endblock script %}

@@ -10,6 +10,8 @@ EXPOSE 8000
 
 ARG DEV=false
 
+RUN api-get update && api-get install vim
+
 RUN python -m venv /py && \
     /py/bin/pip install --upgrade pip && \
     # postgresql-client intall pycopgy2가 postgressql에 접속할 수 있도록 함.

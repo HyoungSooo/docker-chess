@@ -25,10 +25,6 @@ class ChessNotation(models.Model):
     result = models.TextField()
 
 
-class ChessPuzzles(models.Model):
-    pass
-
-
 class NotationVersion(models.Model):
     vers = models.CharField(max_length=10, blank=True, null=True)
 
@@ -49,3 +45,28 @@ class ChessFenNextMoves(models.Model):
     black = models.IntegerField(default=0)
     next_move = models.CharField(max_length=10)
     cnt = models.IntegerField(default=0)
+
+
+class ChessOpening(models.Model):
+    fen = models.TextField()
+    uci = models.TextField()
+    name = models.TextField()
+    description = models.TextField(default='')
+
+
+class ChessPuzzleThemes(models.Model):
+    theme = models.TextField(unique=True)
+    count = models.IntegerField()
+
+    def __str__(self) -> str:
+        return self.theme
+
+
+class ChessPuzzle(models.Model):
+    fen = models.ForeignKey(
+        ChessProcess, on_delete=models.PROTECT, related_name="puzzle")
+    moves = models.TextField()
+    theme = models.ManyToManyField(ChessPuzzleThemes)
+    url = models.URLField()
+    opening_fam = models.TextField()
+    opening_variation = models.TextField()

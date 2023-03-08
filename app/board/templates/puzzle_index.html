@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div>
+  <a href="{% url 'opening_puzzle' %}">opening puzzle</a>
+  <a href="{% url 'puzzle_theme' %}">puzzle theme</a>
+  <a href="{% url 'theme_detail_all' 'attack'%}">puzzle attack</a>
+</div>
+
+{% endblock content %}
+
