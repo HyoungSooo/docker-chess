@@ -5,9 +5,9 @@ from ninja.files import UploadedFile
 from ninja.security import django_auth
 from django.http import JsonResponse, HttpResponse
 from .models import (ChessELO, ChessNotation, ChessNotationCheckPoint,
-                     ChessMainline, ChessFenNextMoves, ChessProcess, ChessOpening, ChessPuzzle, ChessPuzzleThemes)
+                     ChessOpening, ChessPuzzle, ChessPuzzleThemes)
 from django.db.models.functions import Length, Substr
-from api.spark.processor import Processor, MainlineProcessor
+from api.spark.processor import Processor
 from django.core import serializers
 from api.utils import write_pgn_chunk_files, get_stockfish, list_chunk, ask_to_chatgpt, is_fen_valid, split_opening_name
 import chess.pgn
@@ -16,7 +16,7 @@ import chess
 from django.conf import settings
 from multiprocessing import Pool
 import random
-from django.db.models import Q, Count
+from django.db.models import *
 
 
 api = NinjaAPI()
@@ -72,50 +72,35 @@ def parse_notation(request, filename: str, num: int):
     return res.msg
 
 
-@api.get('/mainline')
-def parse_mainline(request, num: int):
-    pool = Pool(2)
-    first_pk = ChessNotation.objects.first()
-    try:
-        checkpoint = ChessMainline.objects.all()[0]
-        if checkpoint.checkpoint < first_pk.pk:
-            checkpoint.checkpoint = first_pk.pk
-    except:
-        checkpoint = ChessMainline.objects.create(checkpoint=first_pk.pk)
-    data = ChessNotation.objects.filter(
-        pk__gte=checkpoint.checkpoint, pk__lt=checkpoint.checkpoint + num)
+@api.get('/moveline')
+def get_moveline(request, moves: str = None):
+    board = chess.Board()
+    if moves == None:
+        data = list(ChessNotation.objects.annotate(submoves=Substr('mainline', 1, 4)).exclude(mainline='').values('submoves').annotate(cnt=Count('submoves'), white_win=Count(
+            'result', filter=Q(result__iexact='white')), draw=Count('result', filter=Q(result__iexact='draw')), black_win=Count('result', filter=Q(result__iexact='black'))).order_by('-cnt'))
 
-    checkpoint.checkpoint += num
-
-    checkpoint.save()
-    if data:
-        # MainlineProcessor(data)
-
-        pool.map(MainlineProcessor, data)
-
-    return
+        return JsonResponse(data, safe=False)
+    else:
+        move = moves.split(',')
+        data = list(ChessNotation.objects.filter(mainline__startswith=moves).exclude(mainline=moves).annotate(submoves=Substr(
+            'mainline', 1+5*len(move), 4)).values('submoves').annotate(cnt=Count('submoves'), white_win=Count(
+                'result', filter=Q(result__iexact='white')), draw=Count('result', filter=Q(result__iexact='draw')), black_win=Count('result', filter=Q(result__iexact='black'))).order_by('-cnt'))
+        return JsonResponse(data, safe=False)
 
 
-@api.get('/get_moveline')
-def get_moveline(request, fen: str):
-    stockfish = get_stockfish()
+@api.get('/fen')
+def get_fen_string_from_current_uci(request, moves: str):
+    board = chess.Board()
 
-    stockfish = is_fen_valid(stockfish, fen)
-    if stockfish:
-        try:
-            fen_data = ChessProcess.objects.get(
-                fen=stockfish.get_fen_position())
+    moves = moves.split(',')
 
-        except:
-            return JsonResponse({"msg": "no data"})
+    for i in moves:
+        board.push_uci(i)
 
-        data = fen_data.next_moves.filter(~Q(next_move='')).order_by('-cnt')
-        data_json = serializers.serialize('json', data)
-
-        return JsonResponse(data_json, safe=False)
+    return board.fen()
 
 
-@api.get('/eval_position')
+@api.get('/eval')
 def eval_pos(request, fen: str):
     stockfish = get_stockfish()
 
@@ -253,6 +238,44 @@ def get_other_related_opening(request, opening: str):
         'name', 'fen', 'uci').distinct('name'))
 
     return JsonResponse(data, safe=False)
+
+
+@api.get('/openingcount')
+def get_opening_count_each_avg_top_5(request):
+
+    data = ChessELO.objects.all().order_by('avg')
+    res = {}
+    for i in data:
+        res[i.avg] = list(i.notation.values_list('opening').annotate(
+            dcount=Count('opening')).order_by('-dcount')[0:5])
+
+    return JsonResponse(res, safe=False)
+
+
+@api.get('openingcountall')
+def get_opening_count_all_top_5(request):
+
+    data = list(ChessNotation.objects.values_list('opening').annotate(
+        dcount=Count('opening')).order_by('-dcount')[0:5])
+
+    return JsonResponse(data, safe=False)
+
+
+@api.get('/notationcount')
+def get_notation_count(request):
+    return ChessNotation.objects.count()
+
+
+@api.get('/currentfile')
+def get_current_parse_file_name(request):
+    return ChessNotationCheckPoint.objects.last().fname
+
+
+@api.get('/pgnfilecount')
+def get_count_parse_file(request):
+    os.chdir('/app/data')
+
+    return len(os.listdir())
 
 
 urlpatterns = [

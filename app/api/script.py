@@ -6,6 +6,7 @@ from api.models import ChessOpening, ChessPuzzle, ChessProcess, ChessPuzzleTheme
 import chess
 from api.utils import get_stockfish
 from multiprocessing import Pool
+import time
 
 
 def opening_run():

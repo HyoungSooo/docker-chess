@@ -18,40 +18,21 @@ class ChessNotation(models.Model):
         ChessELO, on_delete=models.CASCADE, related_name='notation')
     white = models.TextField()
     black = models.TextField()
+    white_elo = models.IntegerField()
+    black_elo = models.IntegerField()
     site = models.TextField()
     mainline = models.TextField()
     opening = models.TextField()
+    opening_fam = models.TextField()
+    eco = models.CharField(max_length=10)
     event = models.TextField()
     result = models.TextField()
-
-
-class NotationVersion(models.Model):
-    vers = models.CharField(max_length=10, blank=True, null=True)
-
-
-class ChessMainline(models.Model):
-    checkpoint = models.IntegerField()
-
-
-class ChessProcess(models.Model):
-    fen = models.TextField(unique=True)
-
-
-class ChessFenNextMoves(models.Model):
-    fen = models.ForeignKey(
-        ChessProcess, on_delete=models.PROTECT, related_name='next_moves')
-    white = models.IntegerField(default=0)
-    draw = models.IntegerField(default=0)
-    black = models.IntegerField(default=0)
-    next_move = models.CharField(max_length=10)
-    cnt = models.IntegerField(default=0)
 
 
 class ChessOpening(models.Model):
     fen = models.TextField()
     uci = models.TextField()
     name = models.TextField()
-    description = models.TextField(default='')
 
 
 class ChessPuzzleThemes(models.Model):
@@ -63,8 +44,7 @@ class ChessPuzzleThemes(models.Model):
 
 
 class ChessPuzzle(models.Model):
-    fen = models.ForeignKey(
-        ChessProcess, on_delete=models.PROTECT, related_name="puzzle")
+    fen = models.TextField()
     moves = models.TextField()
     theme = models.ManyToManyField(ChessPuzzleThemes)
     url = models.URLField()

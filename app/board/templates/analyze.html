@@ -185,41 +185,46 @@
   })
 
   function getData(){
+    if (!$uci.html()){
+      var url = "/chessapi/api/moveline"
+    } else {
+      var url = "/chessapi/api/moveline?moves="
+    }
 
     $.ajax({
       type: "GET",  
-      url: "/chessapi/api/get_moveline?fen=" + $fen.html(),
+      url: url + $uci.html(),
       dataType: "json",
       error: function () {
         console.log("통신실패!!");
       },
-      success: function (moves) {
+      success: function (moves) { 
+        console.log(moves)
         if (moves.msg){
           $tableBody.empty();
           $tableBody.append(moves.msg)
           return
         } 
-        moves = JSON.parse(moves)
         console.log(moves)
         $tableBody.empty();
         for (var i = 0; i < moves.length; i++) {
               var move = moves[i];
               var row = document.createElement("tr");
               var blackWinRateCell = document.createElement("td");
-              blackWinRateCell.textContent = (move.fields.black / (move.fields.black + move.fields.white + move.fields.draw)).toFixed(2);
+              blackWinRateCell.textContent = (move.black_win / (move.black_win + move.white_win + move.draw)).toFixed(2);
               var cntCell = document.createElement("td");
-              cntCell.textContent = move.fields.cnt;
+              cntCell.textContent = move.cnt;
               var drawRateCell = document.createElement("td");
-              drawRateCell.textContent = (move.fields.draw / (move.fields.black + move.fields.white + move.fields.draw)).toFixed(2);
+              drawRateCell.textContent = (move.draw / (move.black_win + move.white_win + move.draw)).toFixed(2);
               var nextMoveCell = document.createElement("td");
-              nextMoveCell.textContent = move.fields.next_move;
+              nextMoveCell.textContent = move.submoves;
               nextMoveCell.addEventListener('click', function(event){
                 let target = event.target;
                 onDrop(target.textContent.slice(0,2), target.textContent.slice(2,4))
                 onSnapEnd()
               })
               var whiteWinRateCell = document.createElement("td");
-              whiteWinRateCell.textContent = (move.fields.white / (move.fields.black + move.fields.white + move.fields.draw)).toFixed(2);
+              whiteWinRateCell.textContent = (move.white_win / (move.black_win + move.white_win + move.draw)).toFixed(2);
               row.appendChild(nextMoveCell);
               row.appendChild(cntCell);
               row.appendChild(whiteWinRateCell);
@@ -227,7 +232,6 @@
               row.appendChild(blackWinRateCell);
               $tableBody.append(row);
           }
-          $opening.html(moves.name);
       },
     });
   }

@@ -44,6 +44,8 @@ services:
     #   - CRON_ENTRY=* * * * * python /app/script_for_parse.py
     volumes:
       - ./docker-cronjob/app:/app
+    environment:
+      - CRON_ENTRY=* * * * * python /app/script_for_parse.py
 
     depends_on:
       - app

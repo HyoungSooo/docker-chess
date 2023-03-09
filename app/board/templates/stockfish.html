@@ -21,24 +21,17 @@
     </form>
   </div>
   <div>
-<<<<<<< HEAD
     <div id="board_wrapper">
         <canvas id="primary_canvas" width="392" height="392" ></canvas>
         <canvas id="drawing_canvas"  width="392" height="392" ></canvas>
         <div id="myBoard" style="width: 500px; margin: 0"></div>
     </div>
-=======
-    <div id="myBoard" style="width: 500px; margin: 0"></div>
->>>>>>> b2630fe1222f24464e465bd17e382232432cb563
     <button id="setresetBtn">Reset Position</button>
     <button id="undo">undo</button>
   </div>
   <div>
-<<<<<<< HEAD
     <label for="eval">eval:</label>
     <div id="eval" name="eval"></div>
-=======
->>>>>>> b2630fe1222f24464e465bd17e382232432cb563
     <label for="status">Status:</label>
     <div id="status" name="status"></div>
     <label for="fen">FEN:</label>
@@ -75,11 +68,8 @@
   var $pgn = $("#pgn");
   var $uci = $("#uci");
   var $undo = $("#undo");
-<<<<<<< HEAD
   var $eval = $("#eval")
   
-=======
->>>>>>> b2630fe1222f24464e465bd17e382232432cb563
 
   function removeGreySquares() {
     $("#myBoard .square-55d63").css("background", "");
@@ -271,7 +261,6 @@
     $status.html(status);
     $fen.html(game.fen());
     $pgn.html(game.pgn());
-<<<<<<< HEAD
     eval()  
     
   }
@@ -289,8 +278,6 @@
     },
   });
 
-=======
->>>>>>> b2630fe1222f24464e465bd17e382232432cb563
   }
 
   var config = {
@@ -321,9 +308,6 @@
     board.orientation("black");
   });
   updateStatus();
-<<<<<<< HEAD
   var overlay = new ChessboardArrows('board_wrapper');
-=======
->>>>>>> b2630fe1222f24464e465bd17e382232432cb563
 </script>
 {% endblock script %}
