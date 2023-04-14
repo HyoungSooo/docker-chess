@@ -2,7 +2,7 @@ from api.models import ChessPuzzle
 from django.db import connection
 from django.core.management.color import no_style
 import pandas as pd
-from api.models import ChessOpening, ChessPuzzle, ChessProcess, ChessPuzzleThemes
+from api.models import ChessOpening, ChessPuzzle
 import chess
 from api.utils import get_stockfish
 from multiprocessing import Pool
@@ -41,21 +41,5 @@ class PuzzleProcess:
 
             for idx, row in chunk.iterrows():
 
-                fen = ChessProcess.objects.get_or_create(fen=row['FEN'])
-
-                self.puzzle = ChessPuzzle.objects.create(fen=fen[0], moves=row['Moves'], url=row['GameUrl'],
-                                                         opening_fam=row['OpeningFamily'], opening_variation=row['OpeningVariation'])
-
-                theme = row['Themes'].split(' ')
-                if theme:
-
-                    pool.map(self.create_or_plus_theme, theme)
-
-    def create_or_plus_theme(self, theme):
-        data = ChessPuzzleThemes.objects.get_or_create(theme=theme)[0]
-
-        self.puzzle.theme.add(data)
-        data.count += 1
-        self.puzzle.save()
-        data.save()
-        return
+                self.puzzle = ChessPuzzle.objects.create(fen=row['FEN'], moves=row['Moves'], url=row['GameUrl'],
+                                                         opening_fam=row['OpeningFamily'], opening_variation=row['OpeningVariation'], theme=row['Themes'])

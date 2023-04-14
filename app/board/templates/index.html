@@ -2,8 +2,180 @@
 {% load static %}
 
 {% block content %}
-    <div class="flex flex-wrap" style="width: 1000px;">
-        <div class="bg-orange-200 h-52 w-52 m-5"></div>
-        <div class="bg-orange-200 h-52 w-52 m-5"></div>
-    </div>
+<!-- component -->
+<!-- This is an example component -->
+<div
+	class='flex sm:flex-row flex-col space-y-2 sm:space-x-2 flex-row w-full items-center justify-center px-10'>
+	<div
+		class='flex flex-wrap flex-row sm:flex-col justify-center items-center w-full sm:w-1/4 p-5 bg-white rounded-md shadow-xl border-l-4 border-blue-300'>
+		<div class="flex justify-between w-full">
+			<div>
+			</div>
+		</div>
+		<div>
+			<div class="font-bold text-5xl">
+				4
+			</div>
+			<div class="font-bold text-sm">
+				Puzzle
+			</div>
+		</div>
+	</div>
+	<div
+		class='flex flex-wrap flex-row sm:flex-col justify-center items-center w-full sm:w-1/4 p-5 bg-white rounded-md shadow-xl border-l-4 border-purple-300'>
+		<div class="flex justify-between w-full">
+			<div>
+			</div>
+		</div>
+		<div >
+			<div class="font-bold text-5xl text-center">
+				1
+			</div>
+			<div class="font-bold text-sm">
+				Notation
+			</div>
+		</div>
+	</div>
+	<div
+		class='flex flex-wrap flex-row sm:flex-col justify-center items-center w-full sm:w-1/4 p-5 bg-white rounded-md shadow-xl border-l-4 border-red-300'>
+		<div class="flex justify-between w-full">
+			<div>
+			</div>
+		</div>
+		<div>
+			<div class="font-bold text-5xl text-center">
+				2
+			</div>
+			<div class="font-bold text-sm">
+				e2e4
+			</div>
+		</div>
+	</div>
+	<div
+		class='flex flex-wrap flex-row sm:flex-col justify-center items-center w-full sm:w-1/4 p-5 bg-white rounded-md shadow-xl border-l-4 border-green-300'>
+		<div class="flex justify-between w-full">
+			<div>
+			</div>
+		</div>
+		<div>
+			<div class="font-bold text-5xl text-center">
+				1
+			</div>
+			<div class="font-bold text-sm">
+				Opening
+			</div>
+		</div>
+	</div>
+</div>
+<div class="overflow-hidden rounded-lg shadow-lg">
+  <div
+    class="bg-neutral-50 py-3 px-5 dark:bg-neutral-700 dark:text-neutral-200">
+  </div>
+  <canvas class="p-10"  width="500" height="200" id="chartLine"></canvas>
+</div>
+
+<!-- Required chart.js -->
+
 {% endblock content %}
+
+{% block script %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Chart line -->
+<script>
+
+  let chessDatasets = {};
+
+  function updateStatus() {
+    getCountPerRatings()
+    chart(chessDatasets.openingData,chessDatasets.label)
+
+  }
+
+  function getCountPerRatings() {
+    $.ajax({
+      type: "GET",  
+      url: '/chessapi/api/openingcountall',
+      async: false,
+      dataType: "json",
+      error: function () {
+        console.log("통신실패!!");
+      },
+      success: function (data) {
+        console.log(data)
+        let label = [];
+        let datasets = [];
+        for (let i = 0; i<data.length; i++){
+          label.push(data[i][0])
+          datasets.push(data[i][1])
+        }
+
+        chessDatasets.label = label;
+        chessDatasets.openingData = datasets;
+      },
+    })
+  }
+  function getMostSelectedOpening() {
+    $.ajax({
+      type: "GET",  
+      url: "/chessapi/api/openingcountall",
+      async: false,
+      error: function () {
+        console.log("통신실패!!");
+      },
+      success: function (ops) {
+        console.log(ops)
+        let labels = [];
+        for(let i = 0; i<ops.length;i++){
+          labels.push(ops[i][0])
+        }
+        chessDatasets.datasetsLabels = labels
+      },
+    });
+  }
+  function getCountPerOpenings() {
+    $.ajax({
+      type: "GET",  
+      url: "/chessapi/api/openingcount",
+      async: false,
+      error: function () {
+        console.log("통신실패!!");
+      },
+      success: function (ops) {
+        console.log(ops)
+      },
+    });
+  }
+
+  function chart (ds , lbs) {
+    const labels = lbs;
+    const data = {
+      labels: labels,
+      datasets: [
+        {
+          label: "Top 10 Selected Opeing",
+          backgroundColor: "hsl(217, 57%, 51%)",
+          borderColor: "hsl(217, 57%, 51%)",
+          data: ds,
+          type: 'bar'
+        },
+      ],
+    };
+
+    const configLineChart = {
+      type: "line",
+      data,
+      options: {},
+    };
+
+    var chartLine = new Chart(
+      document.getElementById("chartLine"),
+      configLineChart
+    );
+  }
+
+  updateStatus()
+
+</script>
+
+{% endblock script %}

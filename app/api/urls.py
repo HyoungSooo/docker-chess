@@ -5,7 +5,7 @@ from ninja.files import UploadedFile
 from ninja.security import django_auth
 from django.http import JsonResponse, HttpResponse
 from .models import (ChessELO, ChessNotation, ChessNotationCheckPoint,
-                     ChessOpening, ChessPuzzle, ChessPuzzleThemes)
+                     ChessOpening, ChessPuzzle)
 from django.db.models.functions import Length, Substr
 from api.spark.processor import Processor
 from django.core import serializers
@@ -18,6 +18,7 @@ from multiprocessing import Pool
 import random
 from django.db.models import *
 
+from stockfish import StockfishException
 
 api = NinjaAPI()
 
@@ -35,17 +36,18 @@ def uploadfile(request, uploaded_file: UploadedFile = File(...)):
 
 
 @api.get('/parse')
-def parse_notation(request, filename: str, num: int):
-    v = 0
+def parse_notation(request, num: int):
+    v = int(ChessNotationCheckPoint.objects.last().fname.split('_')[0])
+    filename = '_'.join(os.listdir('/app/data')[0].split('_')[1:])
     while True:
-        if not os.path.isfile(f'{settings.BASE_DIR}/data/{v}_{filename}'):
-            for i in range(v):
-                os.remove(f'{settings.BASE_DIR}/data/{i}_{filename}')
-            return 'this file already done'
         try:
             checkpoint = ChessNotationCheckPoint.objects.get(
                 fname=f'{v}_{filename}')
             if checkpoint.status == True:
+                try:
+                    os.remove(f'{settings.BASE_DIR}/data/{v}_{filename}')
+                except:
+                    pass
                 v += 1
                 continue
             else:
@@ -109,6 +111,30 @@ def eval_pos(request, fen: str):
         return stockfish.get_evaluation()
 
 
+@api.get('/automate/eval')
+def eval_pos(request, fen_list: str):
+    stockfish = get_stockfish()
+    fen_list = fen_list.replace('_', '/')
+    board = chess.Board()
+    res = []
+    for i in fen_list.split(','):
+        board.set_fen(i)
+        try:
+            stockfish = is_fen_valid(stockfish, board.fen())
+            data = stockfish.get_evaluation()
+
+            if data['type'] == 'mate':
+                continue
+            else:
+                res.append((data['value'], stockfish.get_fen_position()))
+        except:
+            pass
+    if len(res) == 0:
+        return 'retry'
+
+    return min(res, key=lambda n: n[0])[-1]
+
+
 @api.get('/stockfish')
 def stockfish_recommend(request, fen: str):
     stockfish = get_stockfish()
@@ -119,16 +145,19 @@ def stockfish_recommend(request, fen: str):
     return JsonResponse({'msg': 'fen is unvalid'})
 
 
-@api.get('/get_fen')
-def get_fen(request, fen: str, next: str):
+@api.get('/automate')
+def stockfish_recommend(request, fen: str, depth: int, level: int):
     stockfish = get_stockfish()
-
-    stockfish = is_fen_valid(stockfish, fen)
+    stockfish.set_fen_position(fen)
+    stockfish.set_skill_level(level)
+    stockfish.set_depth(depth)
     if stockfish:
-        stockfish.make_moves_from_current_position([next])
-        return stockfish.get_fen_position()
-    else:
-        return 'fen is unvalid'
+        try:
+            return stockfish.get_best_move_time(1000)
+        except StockfishException:
+            return "Cannot make move"
+
+    return JsonResponse({'msg': 'fen is unvalid'})
 
 
 @api.get('/battle_stockfish')
@@ -139,7 +168,6 @@ def stockfish_battle(request, level: int, depth: int, fen: str):
 
     stockfish = is_fen_valid(stockfish, fen)
     if stockfish:
-
         return stockfish.get_best_move_time(1000)
     else:
         return 'unvalid fen'
@@ -171,57 +199,15 @@ def specific_opening_puzzle(request, name: str):
     return JsonResponse(data)
 
 
-@api.post('/ask')
-def get_response_to_chatgpt(request, prommpt: str, end: bool):
-    if not end:
-        message = ask_to_chatgpt(prommpt)
-        return JsonResponse({'msg': message})
-    else:
-        pass
-
-
 @api.get('/puzzle')
-def get_quzzle_query(request, theme: str):
-    if theme != 'all':
-        try:
-
-            data = ChessPuzzleThemes.objects.get(theme=theme).chesspuzzle_set.values(
-                'pk', 'fen__fen', 'moves').order_by("?").first()
-            return JsonResponse(data)
-
-        except:
-            return JsonResponse({'msg': 'unvalid tag'})
-    else:
-        first = ChessPuzzle.objects.first().pk
-
-        while True:
-            num = random.randint(first, first + ChessPuzzle.objects.count())
-
-            data = ChessPuzzle.objects.values(
-                'pk', 'fen__fen', 'moves').filter(pk=num).first()
-            if data:
-                return data
-
-
-@api.get('/puzzle_theme')
-def get_puzzle_themes(request):
-    data = list(ChessPuzzleThemes.objects.all().values('theme', 'count'))
-
-    return JsonResponse(data, safe=False)
-
-
-@api.get('/opening_puzzle')
-def get_opening_puzzle(request, opening: str):
-    name = split_opening_name(opening)
-
-    data = ChessPuzzleThemes.objects.get(
-        theme='opening').chesspuzzle_set.filter(opening_fam__icontains=name).order_by("?").values('opening_fam', 'opening_variation', 'moves', 'fen__fen').first()
-    if data:
-
-        return JsonResponse(data, safe=False)
-
-    else:
-        return JsonResponse({'msg': 'no puzzle'})
+def get_random_puzzle(request):
+    max_id = ChessPuzzle.objects.all().aggregate(max_id=Max("id"))['max_id']
+    while True:
+        pk = random.randint(1, max_id)
+        puzzle = ChessPuzzle.objects.filter(
+            pk=pk).values('fen', 'moves').first()
+        if puzzle:
+            return JsonResponse(puzzle, safe=False)
 
 
 @api.get('/opening_family')
@@ -240,23 +226,15 @@ def get_other_related_opening(request, opening: str):
     return JsonResponse(data, safe=False)
 
 
-@api.get('/openingcount')
-def get_opening_count_each_avg_top_5(request):
+@api.get('/openingcountall')
+def get_opening_count_all_top_10(request, rating: str = None):
+    q = Q()
+    if rating:
+        for i in rating.split(','):
+            q |= Q(avg__avg=i)
 
-    data = ChessELO.objects.all().order_by('avg')
-    res = {}
-    for i in data:
-        res[i.avg] = list(i.notation.values_list('opening').annotate(
-            dcount=Count('opening')).order_by('-dcount')[0:5])
-
-    return JsonResponse(res, safe=False)
-
-
-@api.get('openingcountall')
-def get_opening_count_all_top_5(request):
-
-    data = list(ChessNotation.objects.values_list('opening').annotate(
-        dcount=Count('opening')).order_by('-dcount')[0:5])
+    data = list(ChessNotation.objects.filter(q).values_list('opening').annotate(
+        dcount=Count('opening')).order_by('-dcount')[0:10])
 
     return JsonResponse(data, safe=False)
 
@@ -276,6 +254,42 @@ def get_count_parse_file(request):
     os.chdir('/app/data')
 
     return len(os.listdir())
+
+
+@api.get('/countperrating')
+def get_count_per_rating(request, rating: str = None):
+    if not rating:
+        data = list(ChessNotation.objects.all().values('avg__avg').annotate(
+            cnt=Count('avg__avg')).order_by('avg__avg'))
+        return JsonResponse(data, safe=False)
+
+    else:
+        q = Q()
+        for i in rating.split(','):
+            q |= Q(avg__avg=int(i))
+        data = list(ChessNotation.objects.values('avg__avg').filter(
+            q).annotate(cnt=Count('avg__avg')).order_by('avg__avg'))
+        return JsonResponse(data, safe=False)
+
+
+@api.get('/winrate')
+def get_top_rate_opening(request, opening: str = None, rating: str = None):
+
+    q = Q()
+
+    if rating:
+        for i in rating.split(','):
+            q |= Q(avg=i)
+
+    data = ChessNotation.objects.filter(
+        opening=opening).first()._get_win_rate(q)
+
+    return JsonResponse(data, safe=False)
+
+
+@api.get('/solvedpuzzle')
+def get_solved_puzzle_count(request):
+    return ChessPuzzle.objects.filter(solved=True).count()
 
 
 urlpatterns = [

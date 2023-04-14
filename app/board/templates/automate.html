@@ -1,0 +1,358 @@
+{% extends 'base.html' %} {% load static %} 
+{% block head %}
+  <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
+  <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+{% endblock head %}
+
+
+{% block content %}
+<style>
+  .spare-pieces-top-4028b {
+    display:none
+  }
+  .spare-pieces-bottom-ae20f{
+    display:flex
+  }
+</style>
+<py-config>
+  packages = ['chess']
+</py-config>
+<py-script src="{% static 'py/options.py' %}"></py-script>
+<py-script>
+  import chess
+  import random
+  x = 42
+  
+  def get_board():
+    board = chess.Board()
+    return board
+  
+  def create_random_fen(score, total):
+    count = 0
+    ans = []
+    while True:
+        q = random.randint(0, 6)
+        r = random.randint(0, 10)
+        n = random.randint(0, 16)
+        b = random.randint(0, 16)
+        p = score - (q*8 + r*5 + n*3 + b*3)
+        if p >= 0:
+            if q+r+n+b+p > 15:
+              continue
+            count += 1
+            fen = ['q']*q + ['r']*r + ['n']*n + ['b']*b + ['p']*p + ['k'] + [0] * (32 - (q+r+n+b+p + 1))
+
+            random.shuffle(fen)
+
+            new_lst = [fen[i:i+8] for i in range(0,len(fen),8)]
+            
+            result = ''
+            for row in new_lst:
+                cnt = 0
+                for item in row:
+                    if item == 0:
+                        cnt +=1
+                    else:
+                        if cnt > 0:
+                            result += str(cnt)
+                            cnt = 0
+                        result += str(item)
+                if cnt > 0:
+                    result += str(cnt)
+                result += '/'
+            result = result[:-1] + '/'
+            ans.append(result)
+        if count == total:
+            break
+        
+
+    return ans
+
+  def calc_pieces_score(value:list):
+    return value[0] * 8 + value[1] * 5 + sum(value[2:4])*3 + value[-1]
+
+
+
+
+  
+</py-script>
+
+<div style ='display: flex'>
+  <div id="myBoard" style="width: 500px; margin: 0;"></div>
+  <div id="gameBoard" style="width: 500px; margin: 0; display: none;"></div>
+  <div id='options' style ='display: flex; flex-direction: column;justify-content: center;'></div>
+</div>
+<button onclick = 'startGame()'>Start game</button>
+<p>Current Pieces Score <span id='Cscore'></span></p>
+<p>StockFish Evaluation : <span id='eval' ></span></p>
+
+
+<script>
+  let blackScore = 3
+  let whitePieces = [0,0,0,0,4,1]
+  let copyWP = [0,0,0,0,4,1]
+  let piecesScore = 0;
+  let currentScore = 0;
+  var setBoard = null;
+  let positionSet = [];
+  let $eval = $('#eval')
+  let is_game_over = false
+  const config = {
+    think: 20,
+    player: {depth : 5, level: 5},
+    computer: {depth : 5, level: 5},
+  }
+
+  function defaultPiecesSet(){
+    blackScore = 3
+    whitePieces = [0,0,0,0,3,1]
+    copyWP = [...whitePieces]
+  }
+
+  $( document ).ready(
+     updateScore(piecesScore),  
+  )
+  function updateScore(CPScore){
+    $('#Cscore').html(copyWP)
+  }
+
+  function checkScoreVaildation(pieces){
+    let check = [...copyWP]
+    if (pieces ==='wQ'){
+      check[0] -= 1
+    } else if (pieces ==='wP') {
+      check[4] -= 1
+    } else if (pieces ==='wR') {
+      check[1] -= 1
+    } else if (pieces ==='wB') {
+      check[2] -= 1
+    } else if (pieces ==='wK') {
+      check[5] -= 1
+    } else {
+      check[3] -= 1
+    }
+    if (check.some(function(el) {
+      return el < 0
+    })) {
+      return false
+    }
+   
+    copyWP = [...check]
+    return true
+  }
+
+  function decreaseScore(piece){
+    if (piece ==='wQ'){
+      copyWP[0] += 1
+    } else if (piece ==='wP') {
+      copyWP[4] += 1
+    } else if (piece ==='wR') {
+      copyWP[1] += 1
+    } else if (piece ==='wB') {
+      copyWP[2] += 1
+    } else if (piece ==='wK') {
+      copyWP[5] += 1
+    } else {
+      copyWP[3] += 1
+    }
+  }
+
+  function startGame(){
+      game = setBlackBoard(is_game_over,setBoard.fen().split('/').splice(4,8).join('/'))
+      gameBoard = new Chessboard('gameBoard', {
+        draggable: false,
+        sparePieces: false,
+        position:game.fen()})
+      $('#gameBoard').css('display', 'block')
+      $('#myBoard').css('display', 'none')
+      eval(game)
+      battleStockfish(game,gameBoard)
+  }
+  function battleStockfish(game,board) {
+    if (!game.turn){
+      var level = config.computer.level
+      var depth = config.computer.depth
+    } else {
+      var level = config.player.level
+      var depth = config.player.depth
+    }
+    $.ajax({
+      type: "GET",
+      url:
+        "/chessapi/api/automate?fen=" + game.fen() + '&depth=' + depth + '&level=' + level,
+      dataType: "json",
+      error: function () {
+        console.log("통신실패!!");
+      },
+      success: function (data) {
+        game.push_uci(data)
+        board.position(game.fen());
+        checkStatus(game,board)
+      },
+    });
+  }
+
+  function eval(game){
+
+    $.ajax({
+    type: "GET",
+    url: "/chessapi/api/eval?fen=" + game.fen(),
+    dataType: "json",
+    error: function () {
+      console.log("통신실패!!");
+    },
+    success: function (data) {
+        $eval.html("type : " + data.type  + " value : " + data.value)
+
+      }
+    })}
+
+  function applyOptions(options){
+    common = pyscript.interpreter.globals.get('OptionsCommon').toJs()
+    res = common[options](bP = blackScore, wP = whitePieces)
+    whitePieces = res[0]
+    blackScore = res[1]
+
+    window.setTimeout(init, 1000)
+  }
+
+  function applyButton(value){
+    arr = value.split('__')
+    msg = '';
+    msg += arr[0].replace('w', 'white').replaceAll('_', ' get ') + ' ' + arr[1].replace('b','black').replaceAll('_', ' get ')
+
+    return msg
+  }
+
+  function options(){
+    op = pyscript.interpreter.globals.get('get_common_options')().toJs()
+    $('#options').empty()
+    for (i in op){
+      msg = applyButton(op[i])
+      $('#options').append(`<button class="bg-blue-500 hover:bg-blue-700 text-white font-bold my-4 py-2 px-4 rounded-full" onclick='applyOptions("${op[i]}")'>${msg}</button>`)
+    }
+    updateScore()
+    
+  }
+  function done(){
+
+  }
+
+  function checkStatus(game,board){
+     if (game.is_checkmate() === true && game.turn === false){
+
+      options()
+      return
+     } else if (game.is_game_over() || game.is_repetition(count = 3)){
+      window.setTimeout(init, 1000)
+      is_game_over = true
+     } else {
+      eval(game)
+      battleStockfish(game,board)
+     }
+    }
+  
+  function onDragStart (source, piece, position, orientation) {
+    if ((orientation === 'white' && piece.search(/^w/) === -1) ||
+        (orientation === 'black' && piece.search(/^b/) === -1)) {
+      return false
+    }
+  }
+  function onDrop (source, target, piece, newPos, oldPos, orientation) {
+    if (target.slice(1,2) > 4 || positionSet.includes(target)) {
+      return 'snapback'
+    }
+
+    if (target === 'offboard' && source !== 'spare'){
+      positionSet = positionSet.filter((e) => e !== source)
+      decreaseScore(piece)
+      updateScore(currentScore)
+      return
+    }
+
+    if (target !== 'offboard' && source !== 'spare'){
+      positionSet = positionSet.filter((e) => e !== source)
+      positionSet.push(target)
+      return
+    }
+    
+    if (source === 'spare' && target !=='offboard') {
+      vaildation = checkScoreVaildation(piece)
+      if (!vaildation && target !== 'offboard') {
+        return 'snapback'
+      }
+    }
+    
+    if (target !== 'offboard'){
+      positionSet.push(target)
+    }
+    
+    updateScore(currentScore)
+  }
+
+  function setBlackBoard(status=false, fen){
+    var resultFen = '';
+    if (status){
+      defaultPiecesSet()
+    } 
+    prepareBoard = pyscript.interpreter.globals.get('get_board')()
+    randomFen = pyscript.interpreter.globals.get('create_random_fen')(score = blackScore , count = config.think).toJs();
+    let RF = randomFen.map(function (element) {
+      return element + fen
+    })
+    let stringFen = RF.join(',').replaceAll('/','_')
+    $.ajax({
+      type: "GET",
+      url: `/chessapi/api/automate/eval?fen_list=${stringFen}`,
+      async: false,
+      dataType: "json",
+      error: function () {
+        
+      },
+      success: function (data) {
+        console.log(data)
+        resultFen = data
+      }
+
+    })
+
+    updateScore(currentScore)
+    setBoard.position(resultFen);
+    copyWP = [...whitePieces]
+    prepareBoard.set_fen(resultFen)
+    return prepareBoard
+  }
+
+  function init(){
+    $('#gameBoard').css('display', 'none')
+    $('#myBoard').css('display', 'block')
+    positionSet = [];
+    currentScore = 0
+    $('#options').empty()
+    copyWP = [...whitePieces]
+  }
+
+  function checkVaildations(game){
+    game.turn = false
+
+    if (game.is_check() || game.is_checkmate() || game.is_stalemate() || !game.king(true)){
+      return false
+    }
+
+    game.turn = true
+
+    return game
+  }
+  
+
+  setBoard = new Chessboard('myBoard', {
+    onDragStart: onDragStart,
+    draggable: true,
+    dropOffBoard: 'trash',
+    onDrop: onDrop,
+    sparePieces: true,
+  })
+
+</script>
+
+{% endblock content %} 

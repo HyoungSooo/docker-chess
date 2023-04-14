@@ -1,6 +1,5 @@
 from django.shortcuts import render
 from django.views.generic import ListView
-from api.models import ChessPuzzleThemes
 # Create your views here.
 
 
@@ -9,7 +8,7 @@ class ThemeListView(ListView):
     context_object_name = 'themes'
 
     def get_queryset(self):
-        return ChessPuzzleThemes.objects.all()
+        return
 
 
 def theme_detail(request, theme):

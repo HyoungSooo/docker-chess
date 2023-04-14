@@ -38,27 +38,27 @@ services:
       - POSTGRES_PASSWORD=changeme
       - POSTGRES_DB=devdb
 
-  cron_parse:
-    build: ./docker-cronjob
-    # environment:
-    #   - CRON_ENTRY=* * * * * python /app/script_for_parse.py
-    volumes:
-      - ./docker-cronjob/app:/app
-    environment:
-      - CRON_ENTRY=* * * * * python /app/script_for_parse.py
+  # cron_parse:
+  #   build: ./docker-cronjob
+  #   # environment:
+  #   #   - CRON_ENTRY=* * * * * python /app/script_for_parse.py
+  #   volumes:
+  #     - ./docker-cronjob/app:/app
+  #   environment:
+  #     - CRON_ENTRY=* * * * * python /app/script_for_parse.py
 
-    depends_on:
-      - app
+  #   depends_on:
+  #     - app
 
-  cron_mainline:
-    build: ./docker-cronjob
-    # environment:
-    #   - CRON_ENTRY=* * * * * python /app/script_for_mainline.py
-    volumes:
-      - ./docker-cronjob/app:/app
+  # cron_mainline:
+  #   build: ./docker-cronjob
+  #   # environment:
+  #   #   - CRON_ENTRY=* * * * * python /app/script_for_mainline.py
+  #   volumes:
+  #     - ./docker-cronjob/app:/app
 
-    depends_on:
-      - app
+  #   depends_on:
+  #     - app
 
 volumes:
   # 볼륨의 이름. 자동으로 관리됨 기본 위치에 저장됨

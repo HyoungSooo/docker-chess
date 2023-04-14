@@ -311,7 +311,7 @@
    function eval(){
     $.ajax({
     type: "GET",
-    url: "/chessapi/api/eval_position?fen=" + game.fen(),
+    url: "/chessapi/api/eval?fen=" + game.fen(),
     dataType: "json",
     error: function () {
       console.log("통신실패!!");

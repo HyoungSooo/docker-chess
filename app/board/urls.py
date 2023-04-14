@@ -22,6 +22,8 @@ from .views import *
 
 urlpatterns = [
     path('', TemplateView.as_view(template_name='index.html'), name='home'),
+    path('automate/', TemplateView.as_view(template_name='automate.html'),
+         name='automate'),
     path('analyze/', TemplateView.as_view(template_name='analyze.html'), name='analyze'),
     path('battle/', TemplateView.as_view(template_name='stockfish.html'), name='battle'),
     path('puzzle/', TemplateView.as_view(template_name='puzzle_index.html'), name='puzzle'),

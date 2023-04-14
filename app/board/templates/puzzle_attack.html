@@ -263,14 +263,14 @@
   function getPuzzle(){
       $.ajax({
         type: "GET", 
-        url: "/chessapi/api/puzzle?theme=" + currentTheme,
+        url: "/chessapi/api/puzzle",
         dataType: "json",
         error: function () {
           console.log("통신실패!!");
         },
         success: function (data) {
-          game.load(data.fen__fen)
-          board.position(data.fen__fen, false)
+          game.load(data.fen)
+          board.position(data.fen, false)
           if (game.turn() == 'b'){
             board.orientation('white')
           } else {
