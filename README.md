@@ -40,21 +40,28 @@ in docker-cronjob/docker-compose.yml
         - CRON_ENTRY=* * * * *(change here) python /app/script_for_parse.py
 ```
 
-### endpoints
+### app features
 
-- `chessapi/api/uploadfile` upload pgn file in our server
-- `chessapi/api/parse?filename=' '&num=' '` parse data from pgn file
-- `chessapi/api/getdata` get all data
-- `chessapi/api/mainline?num=<value>` Convert pgn data as much as the value to data
-- `chessapi/api/movedata` get all movedata(which is parsed in /mainline)
-- `chessapi/api/get_moveline?fen=' '` Get the next move of the given fen.
-- `chessapi/api/eval_position?fen=' '` eval position using stockfish
-- `chessapi/api/stockfish?fen=' '` get top moves (3) using stockfish
+chess analysis mode
+- It operates the same as the analysis function provided by lichess and chess.com for the data collected through cronjob. Using stockfish version 11, it also provides an ai analysis function, and if you enter fen, the entered fen position is displayed.
+
+play against the chess engine
+- Ability to play against chess engines. Difficulty can be adjusted as you can directly set the stockfish skill level and depth.
+
+chess puzzle
+- Provides chess puzzle rush function by utilizing chess puzzle data provided by lichess database. Unlike existing lichess and chess.com, it provides a function to check your number in advance.
+
+chess opening puzzle and database
+- Provides a chess opening database. It provides a search function using simple JavaScript and a function to learn chess openings in a puzzle format.
+
+chess automate(developing)
+- A chess automate mode is under development. At the end of the game, you will be given a choice. The options are to add the computer and your pieces, or to increase the computer's intelligence even further.
+
 
 ### how to use
 
 ```
-<clone our repository>
+<clone this repository>
 
 cd <repository>
 
