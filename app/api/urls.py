@@ -160,7 +160,7 @@ def stockfish_recommend(request, fen: str, depth: int, level: int):
     return JsonResponse({'msg': 'fen is unvalid'})
 
 
-@api.get('/battle_stockfish')
+@api.get('/stockfish/battle')
 def stockfish_battle(request, level: int, depth: int, fen: str):
     stockfish = get_stockfish()
     stockfish.set_skill_level(level)
@@ -188,7 +188,7 @@ def get_random_opening(request):
     return HttpResponse(data_json, content_type="text/json-comment-filtered")
 
 
-@api.get('/opening_one')
+@api.get('/opening/one')
 def specific_opening_puzzle(request, name: str):
     try:
         data = ChessOpening.objects.filter(name=name).annotate(
@@ -210,7 +210,7 @@ def get_random_puzzle(request):
             return JsonResponse(puzzle, safe=False)
 
 
-@api.get('/opening_family')
+@api.get('/opening/family')
 def get_opening_family(request):
     data = list(ChessOpening.objects.exclude(
         name__contains=':').annotate(sub=Substr('uci', 1, 4)).values('name', 'sub').all().distinct('name').order_by('name'))
@@ -218,7 +218,7 @@ def get_opening_family(request):
     return JsonResponse(data, safe=False)
 
 
-@api.get('/other_opening')
+@api.get('/opening/other')
 def get_other_related_opening(request, opening: str):
     data = list(ChessOpening.objects.filter(name__istartswith=opening).values(
         'name', 'fen', 'uci').distinct('name'))
@@ -226,7 +226,7 @@ def get_other_related_opening(request, opening: str):
     return JsonResponse(data, safe=False)
 
 
-@api.get('/openingcountall')
+@api.get('/opening/count')
 def get_opening_count_all_top_10(request, rating: str = None):
     q = Q()
     if rating:
@@ -239,24 +239,24 @@ def get_opening_count_all_top_10(request, rating: str = None):
     return JsonResponse(data, safe=False)
 
 
-@api.get('/notationcount')
+@api.get('/notation/count')
 def get_notation_count(request):
     return ChessNotation.objects.count()
 
 
-@api.get('/currentfile')
+@api.get('/file/current')
 def get_current_parse_file_name(request):
     return ChessNotationCheckPoint.objects.last().fname
 
 
-@api.get('/pgnfilecount')
+@api.get('/file/pgn')
 def get_count_parse_file(request):
     os.chdir('/app/data')
 
     return len(os.listdir())
 
 
-@api.get('/countperrating')
+@api.get('/rating')
 def get_count_per_rating(request, rating: str = None):
     if not rating:
         data = list(ChessNotation.objects.all().values('avg__avg').annotate(
@@ -272,7 +272,7 @@ def get_count_per_rating(request, rating: str = None):
         return JsonResponse(data, safe=False)
 
 
-@api.get('/winrate')
+@api.get('/rate/win')
 def get_top_rate_opening(request, opening: str = None, rating: str = None):
 
     q = Q()
@@ -287,7 +287,7 @@ def get_top_rate_opening(request, opening: str = None, rating: str = None):
     return JsonResponse(data, safe=False)
 
 
-@api.get('/solvedpuzzle')
+@api.get('/puzzle/solve')
 def get_solved_puzzle_count(request):
     return ChessPuzzle.objects.filter(solved=True).count()
 
